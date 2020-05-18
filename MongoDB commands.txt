@@ -1,0 +1,7 @@
+show dbs - Print a list of all databases on the server.
+use SmartCargo - Switch current database to SmartCargo.
+show collections - Print a list of all collections for current database.
+
+
+docs
+https://mongoosejs.com/docs/guide.html
