@@ -1,9 +1,9 @@
 const router = require("express").Router();
-const orderModel = require("../models/ordres");
-
-// /custmoer/;
+const orderModel = require("../models/orders");
 
 router.post("/", (req, res) => {
+  //need to add validation
+
   const order = new orderModel(req.body);
   order
     .save()
@@ -33,4 +33,4 @@ module.exports = router;
 //   ],
 //   "email": "test@yopmail.com",
 //   "phone": "+94-77-339-8956"
-//}
+// }
