@@ -18,6 +18,9 @@ app.use(express.urlencoded({ extended: false }));
 const customerRoute = require("./routes/customer");
 app.use("/customer", customerRoute);
 
+const authRoute = require("./routes/auth");
+app.use("/auth", authRoute);
+
 //root end-point
 app.get("/", (req, res) => {
   res.status(200).json({
