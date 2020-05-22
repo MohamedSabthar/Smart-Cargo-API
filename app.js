@@ -20,6 +20,12 @@ app.use(express.urlencoded({ extended: false }));
 const customerRoute = require("./routes/customer");
 app.use("/customer", customerRoute);
 
+const authRoute = require("./routes/auth");
+app.use("/auth", authRoute);
+
+const adminRoute = require("./routes/admin");
+app.use("/admin", adminRoute);
+
 //root end-point
 app.get("/", (req, res) => {
   res.status(200).json({
