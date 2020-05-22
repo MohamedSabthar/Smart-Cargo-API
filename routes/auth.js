@@ -1,6 +1,8 @@
 const router = require("express").Router();
 const userModel = require("../models/users");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const secretkey = process.env.SECRET || "secret";
 
 router.post("/sign-up", (req, res) => {
   //need to add validations
@@ -16,16 +18,67 @@ router.post("/sign-up", (req, res) => {
     user
       .save()
       .then((result) => {
-        res.status(201).json({
+        return res.status(201).json({
           message: "User Created",
         });
       })
       .catch((err) => {
-        res.status(500).json({
+        return res.status(500).json({
           error: err,
         });
       });
   });
+});
+
+router.post("/sign-in", (req, res) => {
+  userModel
+    .find()
+    .where("contact.email")
+    .equals(req.body.email)
+    .exec()
+    .then((user) => {
+      // if no users found for given email throw error
+      if (user.length < 1) {
+        return res.status(401).json({
+          message: "You have entered invalid credentials",
+        });
+      }
+      // else
+      bcrypt.compare(req.body.password, user[0].password, (err, isMatched) => {
+        if (err) {
+          return res.status(500).json({
+            error: err,
+          });
+        }
+        if (isMatched) {
+          //jwt
+          const token = jwt.sign(
+            {
+              _id: user[0]._id,
+              role: user[0].role,
+              iat: Date.now(),
+            },
+            secretkey,
+            {
+              expiresIn: "1h",
+            }
+          );
+          return res.status(200).json({
+            message: "You have successfully logged in",
+            token: token,
+          });
+        }
+        //return error if password doesn't match
+        return res.status(401).json({
+          message: "You have entered invalid credentials",
+        });
+      });
+    })
+    .catch((err) => {
+      return res.status(500).json({
+        error: err,
+      });
+    });
 });
 
 module.exports = router;
