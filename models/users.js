@@ -1,6 +1,7 @@
 const mongoose = require("../connection");
 
 const userSchema = new mongoose.Schema({
+  //common user details (admin,driver & store-keeper)
   name: {
     first: { type: String },
     middle: { type: String },
@@ -14,6 +15,10 @@ const userSchema = new mongoose.Schema({
   },
   role: { type: String },
   password: { type: String },
+
+  //driver specific details
+  license_no: { type: String },
+  allowed_vehicle: { type: [mongoose.Schema.Types.ObjectId] }, // contians list of _id from vechicleTypeModel
 });
 
 module.exports = mongoose.model("users", userSchema);

@@ -1,6 +1,8 @@
 const bcrypt = require("bcrypt");
 const router = require("express").Router();
 const userModel = require("../models/users");
+const vehicleTypeModel = require("../models/vehicle-type");
+const vehicleModel = require("../models/vehicle");
 
 const adminMiddleware = require("../middleware/admin-middleware");
 
@@ -30,11 +32,43 @@ router.post("/register-driver", adminMiddleware, (req, res) => {
   });
 });
 
-router.post("/register-vehicle", adminMiddleware, (req, res) => {});
+router.post("/register-vehicle-type", (req, res) => {
+  const vehicleType = new vehicleTypeModel(req.body);
+
+  vehicleType
+    .save()
+    .then((result) => {
+      return res.status(201).json({
+        message: "vehicle type registered successfully",
+      });
+    })
+    .catch((err) => {
+      return res.status(500).json({
+        error: err,
+      });
+    });
+});
+
+router.post("/register-vehicle", adminMiddleware, (req, res) => {
+  const vehicle = new vehicleModel(req.body);
+
+  vehicle
+    .save()
+    .then((result) => {
+      return res.status(201).json({
+        message: "vechile registered successfully",
+      });
+    })
+    .catch((err) => {
+      return res.status(500).json({
+        error: err,
+      });
+    });
+});
 
 module.exports = router;
 
-//sample data for sign-up
+//sample data for driver-registration
 
 // {
 // 	"name": {
