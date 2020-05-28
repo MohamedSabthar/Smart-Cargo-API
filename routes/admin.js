@@ -32,7 +32,7 @@ router.post("/register-driver", adminMiddleware, (req, res) => {
   });
 });
 
-router.post("/register-vehicle-type", (req, res) => {
+router.post("/register-vehicle-type", adminMiddleware, (req, res) => {
   const vehicleType = new vehicleTypeModel(req.body);
 
   vehicleType
