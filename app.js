@@ -7,6 +7,10 @@ const io = require("socket.io")(server);
 
 const morgan = require("morgan");
 
+//enabling cors
+var cors = require('cors')
+app.use(cors())
+
 const port = process.env.PORT || 3000;
 
 //logger middleware
