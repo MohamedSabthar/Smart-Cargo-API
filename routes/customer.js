@@ -1,13 +1,14 @@
 const router = require("express").Router();
 const orderModel = require("../models/orders");
-const Joi = require('@hapi/joi');
+const Joi = require("@hapi/joi");
 
 router.post("/", (req, res) => {
   //validating customer order request
   const { error, value } = validateOrder(req.body);
   //checking for bad(400) request error
-  if(error)  res.status(400).json({error: error});
-  else { const order = new orderModel(value);
+  if (error) res.status(400).json({ error: error });
+  else {
+    const order = new orderModel(value);
     order
       .save()
       .then((doc) => {
@@ -16,32 +17,33 @@ router.post("/", (req, res) => {
         }
         res.status(201).send(doc);
       })
-  
+
       .catch((err) => {
-        res.status(500).json({error:err});
-      });}
- 
+        res.status(500).json({ error: err });
+      });
+  }
 });
 
 //validation for customer order
-function validateOrder(order){
+function validateOrder(order) {
   const schema = Joi.object().keys({
-    location : {
-      lat : Joi.number().required(),
-      long : Joi.number().required()
+    location: {
+      lat: Joi.number().required(),
+      long: Joi.number().required(),
     },
-    products : Joi.array().items({
-      item : Joi.string().required(),
-      quantity : Joi.number().integer().min(1).required()
+    products: Joi.array().items({
+      item: Joi.string().required(),
+      quantity: Joi.number().integer().min(1).required(),
     }),
-    email : Joi.string().email().required(),
-    phone : Joi.string().pattern(new RegExp(/^(?:0|94|\+94)?(?:(11|21|23|24|25|26|27|31|32|33|34|35|36|37|38|41|45|47|51|52|54|55|57|63|65|66|67|81|912)(0|2|3|4|5|7|9)|7(0|1|2|5|6|7|8)\d)\d{6}$/)),
-
+    email: Joi.string().email().required(),
+    phone: Joi.string().pattern(
+      new RegExp(
+        /^(?:0|94|\+94)?(?:(11|21|23|24|25|26|27|31|32|33|34|35|36|37|38|41|45|47|51|52|54|55|57|63|65|66|67|81|912)(0|2|3|4|5|7|9)|7(0|1|2|5|6|7|8)\d)\d{6}$/,
+      ),
+    ),
   });
 
   return schema.validate(order);
-  
-
 }
 
 module.exports = router;

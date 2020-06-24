@@ -10,6 +10,7 @@ const orderSchema = new mongoose.Schema({
   ],
   email: { type: String },
   phone: { type: String },
+  emergency_level : { type:String }  // an order can take high/medium/low emergacy_level 
 });
 
 module.exports = mongoose.model("orders", orderSchema);

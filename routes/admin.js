@@ -66,6 +66,10 @@ router.post("/register-vehicle", adminMiddleware, (req, res) => {
     });
 });
 
+router.get("/", adminMiddleware, (req, res) => {
+  return res.status(200).json({ message: "test" });
+});
+
 module.exports = router;
 
 //sample data for driver-registration

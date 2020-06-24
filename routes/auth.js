@@ -43,15 +43,10 @@ router.post("/sign-in", (req, res) => {
           message: "You have entered invalid credentials",
         });
       }
-      // else
+      // else compare the hased password
       bcrypt.compare(req.body.password, user[0].password, (err, isMatched) => {
-        if (err) {
-          return res.status(500).json({
-            error: err,
-          });
-        }
         if (isMatched) {
-          //jwt
+          //return jwt token on password match
           const token = jwt.sign(
             {
               _id: user[0]._id,
@@ -61,14 +56,19 @@ router.post("/sign-in", (req, res) => {
             secretkey,
             {
               expiresIn: "1h",
-            }
+            },
           );
           return res.status(200).json({
             message: "You have successfully logged in",
             token: token,
           });
         }
-        //return error if password doesn't match
+        //return error if password doesn't match or on server error
+        if (err) {
+          return res.status(500).json({
+            error: err,
+          });
+        }
         return res.status(401).json({
           message: "You have entered invalid credentials",
         });
