@@ -13,6 +13,7 @@ mongoose.set("useCreateIndex", true);
 mongoose.connect(URL, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
+  useFindAndModify: false,
 });
 
 module.exports = mongoose;

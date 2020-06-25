@@ -3,8 +3,10 @@ const router = require("express").Router();
 const userModel = require("../models/users");
 const vehicleTypeModel = require("../models/vehicle-type");
 const vehicleModel = require("../models/vehicle");
+const Joi = require("@hapi/joi");
 
 const adminMiddleware = require("../middleware/admin-middleware");
+const { optional, options, func } = require("@hapi/joi");
 
 router.post("/register-driver", adminMiddleware, (req, res) => {
   bcrypt.hash(req.body.password, 10, (err, hash) => {
@@ -32,21 +34,47 @@ router.post("/register-driver", adminMiddleware, (req, res) => {
   });
 });
 
-router.post("/register-vehicle-type", adminMiddleware, (req, res) => {
-  const vehicleType = new vehicleTypeModel(req.body);
+router.post("/register-vehicle-type", adminMiddleware, async (req, res) => {
+  //validating vehicle type registration
+  const { error, value } = await validateVehicleType(req.body);
 
-  vehicleType
-    .save()
-    .then((result) => {
-      return res.status(201).json({
-        message: "vehicle type registered successfully",
+  //checking for bad(400) request error
+  if (error) res.status(400).json({ error: error });
+  else {
+    const vehicleType = new vehicleTypeModel(value);
+
+    vehicleType
+      .save()
+      .then((result) => {
+        return res.status(201).json({
+          message: "vehicle type registered successfully",
+        });
+      })
+      .catch((err) => {
+        return res.status(500).json({
+          error: err,
+        });
       });
-    })
-    .catch((err) => {
-      return res.status(500).json({
-        error: err,
-      });
-    });
+  }
+});
+
+router.put("/update-vehicle-type/:id", adminMiddleware, async (req, res) => {
+  const { error, value } = await validateVehicleType(
+    req.body,
+    true,
+    req.params.id
+  );
+  if (error) {
+    res.status(400).json({ error: error });
+  } else {
+    vehicleTypeModel.findByIdAndUpdate(
+      req.params.id,
+      value,
+      { new: false },
+      () =>
+        res.status(200).json({ message: "Vehicle Type updated successfully" })
+    );
+  }
 });
 
 router.post("/register-vehicle", adminMiddleware, (req, res) => {
@@ -70,6 +98,62 @@ router.get("/", adminMiddleware, (req, res) => {
   return res.status(200).json({ message: "test" });
 });
 
+//validation for register-vehicle type
+async function validateVehicleType(vehicleType, isUpdate = false, id = null) {
+  let query = vehicleTypeModel
+    .find()
+    .where("type")
+    .equals(vehicleType.type.toLowerCase());
+  if (isUpdate) query.where("_id").ne(id);
+  const validation = await query.exec().then((types) => {
+    if (types.length >= 1) {
+      return { error: "Vehicle type already registered", value: {} };
+    }
+
+    const schema = Joi.object().keys({
+      type: Joi.string()
+        .pattern(
+          new RegExp(
+            /^[A-Za-z0-9 ]*[A-Za-z0-9][A-Za-z0-9 ]*$/ //allow only letter, numbers & spaces
+          )
+        )
+        .lowercase()
+        .trim()
+        .required(),
+      capacity: {
+        volume: Joi.number().min(1).required(),
+        max_load: Joi.number().min(10).required(),
+      },
+      fuel_economy: Joi.number().min(1).required(),
+    });
+
+    return schema.validate(vehicleType, { abortEarly: false });
+  });
+  return validation;
+}
+
+async function validateUpdateVehicleType(vehicleType) {
+  const validation = await vehicleTypeModel.find().where("_id");
+
+  const schema = Joi.object().keys({
+    type: Joi.string()
+      .pattern(
+        new RegExp(
+          /^[A-Za-z0-9 ]*[A-Za-z0-9][A-Za-z0-9 ]*$/ //allow only letter, numbers & spaces
+        )
+      )
+      .lowercase()
+      .trim()
+      .required(),
+    capacity: {
+      volume: Joi.number().min(1).required(),
+      max_load: Joi.number().min(10).required(),
+    },
+    fuel_economy: Joi.number().min(1).required(),
+  });
+
+  return schema.validate(vehicleType, { abortEarly: false });
+}
 module.exports = router;
 
 //sample data for driver-registration
