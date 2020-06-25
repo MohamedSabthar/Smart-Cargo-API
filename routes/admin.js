@@ -6,7 +6,6 @@ const vehicleModel = require("../models/vehicle");
 const Joi = require("@hapi/joi");
 
 const adminMiddleware = require("../middleware/admin-middleware");
-const { optional, options, func } = require("@hapi/joi");
 
 router.post("/register-driver", adminMiddleware, (req, res) => {
   bcrypt.hash(req.body.password, 10, (err, hash) => {
@@ -62,7 +61,7 @@ router.put("/update-vehicle-type/:id", adminMiddleware, async (req, res) => {
   const { error, value } = await validateVehicleType(
     req.body,
     true,
-    req.params.id
+    req.params.id,
   );
   if (error) {
     res.status(400).json({ error: error });
@@ -72,33 +71,50 @@ router.put("/update-vehicle-type/:id", adminMiddleware, async (req, res) => {
       value,
       { new: false },
       () =>
-        res.status(200).json({ message: "Vehicle Type updated successfully" })
+        res.status(200).json({ message: "Vehicle Type updated successfully" }),
     );
   }
 });
 
-router.post("/register-vehicle", adminMiddleware, (req, res) => {
-  const vehicle = new vehicleModel(req.body);
+router.post("/register-vehicle", adminMiddleware, async (req, res) => {
+  //validating the vehicle request
+  const { error, value } = await validateVehicle(req.body);
+  //checking for bad(400) request error
+  if (error) res.status(400).json({ error: error });
+  else {
+    const vehicle = new vehicleModel(value);
 
-  vehicle
-    .save()
-    .then((result) => {
-      return res.status(201).json({
-        message: "vechile registered successfully",
+    vehicle
+      .save()
+      .then((result) => {
+        return res.status(201).json({
+          message: "vechile registered successfully",
+        });
+      })
+      .catch((err) => {
+        return res.status(500).json({
+          error: err,
+        });
       });
-    })
-    .catch((err) => {
-      return res.status(500).json({
-        error: err,
-      });
-    });
+  }
+});
+
+router.put("/update-vehicle/:id", adminMiddleware, async (req, res) => {
+  const { error, value } = await validateVehicle(req.body, true, req.params.id);
+  if (error) {
+    res.status(400).json({ error: error });
+  } else {
+    vehicleModel.findByIdAndUpdate(req.params.id, value, { new: false }, () =>
+      res.status(200).json({ message: "Vehicle details updated successfully" }),
+    );
+  }
 });
 
 router.get("/", adminMiddleware, (req, res) => {
   return res.status(200).json({ message: "test" });
 });
 
-//validation for register-vehicle type
+//validation for vehicle type registration & update
 async function validateVehicleType(vehicleType, isUpdate = false, id = null) {
   let query = vehicleTypeModel
     .find()
@@ -114,8 +130,8 @@ async function validateVehicleType(vehicleType, isUpdate = false, id = null) {
       type: Joi.string()
         .pattern(
           new RegExp(
-            /^[A-Za-z0-9 ]*[A-Za-z0-9][A-Za-z0-9 ]*$/ //allow only letter, numbers & spaces
-          )
+            /^[A-Za-z0-9 ]*[A-Za-z0-9][A-Za-z0-9 ]*$/, //allow only letter, numbers & spaces
+          ),
         )
         .lowercase()
         .trim()
@@ -129,6 +145,65 @@ async function validateVehicleType(vehicleType, isUpdate = false, id = null) {
 
     return schema.validate(vehicleType, { abortEarly: false });
   });
+  return validation;
+}
+
+//validation for vehicle update & register
+async function validateVehicle(vehicle, isUpdate = false, id = null) {
+  const validation = await vehicleTypeModel
+    .findById(vehicle.type_id)
+    .exec()
+    .then(async (type) => {
+      console.log(type);
+      //checking for valid vehicle-type
+      if (!type) {
+        return { error: "Invalid vehicle type selected", value: {} };
+      }
+
+      let query = vehicleModel
+        .where("license_plate")
+        .equals(vehicle.license_plate.trim().toUpperCase());
+
+      //if validation for update then exclude current vehicle document while checking unique license no
+      if (isUpdate) {
+        query.where("_id").ne(id);
+      }
+
+      let isVehicleAlreadyExist = await query
+        .exec()
+        .then((vehicles) => {
+          if (vehicles.length >= 1)
+            //return error if licensce no already exit else return false
+            return { error: "Licence plate no already exists", value: {} };
+          return false;
+        })
+        .catch((err) => {
+          return { error: err, value: {} };
+        });
+
+      if (isVehicleAlreadyExist)
+        // return the {error,value} object if vehicle already exists
+        return isVehicleAlreadyExist;
+
+      const schema = Joi.object().keys({
+        type_id: Joi.string().trim().required(),
+        license_plate: Joi.string()
+          .trim()
+          .pattern(
+            new RegExp(
+              /^[A-Za-z]{2,3}[0-9]{4}$/, //regex for licence plate no
+            ),
+          )
+          .uppercase()
+          .required(),
+        on_repair: Joi.bool(),
+      });
+
+      return schema.validate(vehicle, { abortEarly: false });
+    })
+    .catch((err) => {
+      return { error: err, value: {} };
+    });
   return validation;
 }
 
