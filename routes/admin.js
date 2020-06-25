@@ -7,7 +7,10 @@ const Joi = require("@hapi/joi");
 
 const adminMiddleware = require("../middleware/admin-middleware");
 
-router.post("/register-driver", adminMiddleware, (req, res) => {
+//only admin can execute all the functions implemented here 
+router.use(adminMiddleware);
+
+router.post("/register-driver", (req, res) => {
   bcrypt.hash(req.body.password, 10, (err, hash) => {
     if (err) {
       return res.status(500).json({
@@ -33,7 +36,7 @@ router.post("/register-driver", adminMiddleware, (req, res) => {
   });
 });
 
-router.post("/register-vehicle-type", adminMiddleware, async (req, res) => {
+router.post("/register-vehicle-type", async (req, res) => {
   //validating vehicle type registration
   const { error, value } = await validateVehicleType(req.body);
 
@@ -57,7 +60,7 @@ router.post("/register-vehicle-type", adminMiddleware, async (req, res) => {
   }
 });
 
-router.put("/update-vehicle-type/:id", adminMiddleware, async (req, res) => {
+router.put("/update-vehicle-type/:id", async (req, res) => {
   const { error, value } = await validateVehicleType(
     req.body,
     true,
@@ -76,7 +79,7 @@ router.put("/update-vehicle-type/:id", adminMiddleware, async (req, res) => {
   }
 });
 
-router.post("/register-vehicle", adminMiddleware, async (req, res) => {
+router.post("/register-vehicle", async (req, res) => {
   //validating the vehicle request
   const { error, value } = await validateVehicle(req.body);
   //checking for bad(400) request error
@@ -99,7 +102,7 @@ router.post("/register-vehicle", adminMiddleware, async (req, res) => {
   }
 });
 
-router.put("/update-vehicle/:id", adminMiddleware, async (req, res) => {
+router.put("/update-vehicle/:id", async (req, res) => {
   const { error, value } = await validateVehicle(req.body, true, req.params.id);
   if (error) {
     res.status(400).json({ error: error });
@@ -110,7 +113,23 @@ router.put("/update-vehicle/:id", adminMiddleware, async (req, res) => {
   }
 });
 
-router.get("/", adminMiddleware, (req, res) => {
+router.delete("/delete-vehicle/:id", (req, res) => {
+  vehicleModel
+    .findByIdAndDelete(req.params.id)
+    .exec()
+    .then((vehicle) => {
+      //checking whether the given id already exist in database
+      if (!vehicle) return res.status(400).json({ error: "vehicle not found" });
+      return res.status(200).json({ message: "vehicle deleted successfully" });
+    })
+    .catch((err) => {
+      return res.status(500).json({
+        error: err,
+      });
+    });
+});
+
+router.get("/", (req, res) => {
   return res.status(200).json({ message: "test" });
 });
 
