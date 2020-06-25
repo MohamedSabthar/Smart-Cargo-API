@@ -132,28 +132,6 @@ async function validateVehicleType(vehicleType, isUpdate = false, id = null) {
   return validation;
 }
 
-async function validateUpdateVehicleType(vehicleType) {
-  const validation = await vehicleTypeModel.find().where("_id");
-
-  const schema = Joi.object().keys({
-    type: Joi.string()
-      .pattern(
-        new RegExp(
-          /^[A-Za-z0-9 ]*[A-Za-z0-9][A-Za-z0-9 ]*$/ //allow only letter, numbers & spaces
-        )
-      )
-      .lowercase()
-      .trim()
-      .required(),
-    capacity: {
-      volume: Joi.number().min(1).required(),
-      max_load: Joi.number().min(10).required(),
-    },
-    fuel_economy: Joi.number().min(1).required(),
-  });
-
-  return schema.validate(vehicleType, { abortEarly: false });
-}
 module.exports = router;
 
 //sample data for driver-registration
