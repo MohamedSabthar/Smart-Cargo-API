@@ -11,7 +11,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-const webAppLink  = process.env.WEB_APP_DOMAIN || "http://localhost:4200/reset-password";
+const webAppLink  = process.env.WEB_APP_DOMAIN || "http://localhost:4200";
 
 //this function require user(recipeint) object and a token
 //token used to verify the user authenticy while resetting the password
@@ -21,7 +21,7 @@ module.exports = (recipient,token) => {
         from: 'SmartCargo',
         to: recipient.contact.email,
         subject: 'SmartCargo forgot your password!',
-        html: forgotPassword(`${recipient.name.first} ${recipient.name.last}`,`${webAppLink}/${token}`)
+        html: forgotPassword(`${recipient.name.first} ${recipient.name.last}`,`${webAppLink}/reset-password/${token}`)
       };
 
       transporter.sendMail(mailOptions, (error, info)=> {
