@@ -121,7 +121,7 @@ module.exports = (name,linkToWebApp) => {
                                   style="padding: 0px; color: #111111; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 48px; font-weight: 400; line-height: 62px;padding:0 0 15px 0; letter-spacing: 1px;"
                                 >
                                   <a
-                                    href="http://localhost::4200/"
+                                    href="${process.env.WEB_APP_DOMAIN}"
                                     target="_blank"
                                     style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;color: #4D5C84;font-size: 30px;font-weight:900;-webkit-font-smoothing:antialiased;text-decoration: none;"
                                     >SmartCargo</a
@@ -134,7 +134,7 @@ module.exports = (name,linkToWebApp) => {
                                   style="padding: 0px; color: #111111; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 48px; font-weight: 400; line-height: 48px;padding:0 0 15px 0;"
                                 >
                                   <a
-                                    href="http://localhost::4200"
+                                    href="${process.env.WEB_APP_DOMAIN}"
                                     target="_blank"
                                     style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;color: #4D5C84;font-size: 12px;font-weight:400;-webkit-font-smoothing:antialiased;text-decoration: none;"
                                     >Login SmartCargo</a
