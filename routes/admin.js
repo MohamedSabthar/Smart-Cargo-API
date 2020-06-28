@@ -161,6 +161,7 @@ async function validateVehicleType(vehicleType, isUpdate = false, id = null) {
     .find()
     .where("type")
     .equals(vehicleType.type.toLowerCase());
+  //extend the query if the request is update
   if (isUpdate) query.where("_id").ne(id);
   const validation = await query
     .exec()
