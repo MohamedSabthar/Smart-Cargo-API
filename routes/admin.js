@@ -7,7 +7,7 @@ const Joi = require("@hapi/joi");
 
 const adminMiddleware = require("../middleware/admin-middleware");
 
-//only admin can execute all the functions implemented here 
+//only admin can execute all the functions implemented here
 router.use(adminMiddleware);
 
 router.post("/register-driver", (req, res) => {
@@ -107,9 +107,19 @@ router.put("/update-vehicle/:id", async (req, res) => {
   if (error) {
     res.status(400).json({ error: error });
   } else {
-    vehicleModel.findByIdAndUpdate(req.params.id, value, { new: false }, () =>
-      res.status(200).json({ message: "Vehicle details updated successfully" }),
-    );
+    vehicleModel
+      .findByIdAndUpdate(req.params.id, value, { new: false })
+      .exec()
+      .then((vehicle) => {
+        if (!vehicle)
+          return res.status(400).json({ error: "Invalid vehicle id provided" });
+        res
+          .status(200)
+          .json({ message: "Vehicle details updated successfully" });
+      })
+      .catch((err) => {
+        res.status(500).json({ error: err });
+      });
   }
 });
 
