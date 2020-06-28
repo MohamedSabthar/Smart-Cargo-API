@@ -6,8 +6,6 @@ const vehicleModel = require("../models/vehicle");
 const Joi = require("@hapi/joi");
 
 const adminMiddleware = require("../middleware/admin-middleware");
-const vehicleType = require("../models/vehicle-type");
-const { Error } = require("mongoose");
 
 //only admin can execute all the functions implemented here
 router.use(adminMiddleware);
