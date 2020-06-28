@@ -7,7 +7,7 @@ const Joi = require("@hapi/joi");
 
 const adminMiddleware = require("../middleware/admin-middleware");
 
-//only admin can execute all the functions implemented here 
+//only admin can execute all the functions implemented here
 router.use(adminMiddleware);
 
 router.post("/register-driver", (req, res) => {
@@ -61,22 +61,42 @@ router.post("/register-vehicle-type", async (req, res) => {
 });
 
 router.put("/update-vehicle-type/:id", async (req, res) => {
+  //validating the update request data
   const { error, value } = await validateVehicleType(
     req.body,
     true,
-    req.params.id,
+    req.params.id
   );
   if (error) {
     res.status(400).json({ error: error });
   } else {
-    vehicleTypeModel.findByIdAndUpdate(
-      req.params.id,
-      value,
-      { new: false },
-      () =>
-        res.status(200).json({ message: "Vehicle Type updated successfully" }),
-    );
+    vehicleTypeModel
+      .findByIdAndUpdate(req.params.id, value, { new: false })
+      .exec()
+      .then((vehicleType) => {
+        //checking if given id does not exist in the database
+        if (!vehicleType)
+          return res.status(400).json({ error: "Vehicle type not found" });
+        return res
+          .status(200)
+          .json({ message: "Vehicle Type updated successfully" });
+      });
   }
+});
+
+router.delete("/delete-vehicle-type/:id", (req, res) => {
+  vehicleTypeModel
+    .findByIdAndDelete(req.params.id)
+    .exec()
+    .then((vehicleType) => {
+      //checking if given id does not exist in the database
+      if (!vehicleType)
+        return res.status(400).json({ error: "Vehicle type not found" });
+      return res.status(200).json({ message: "vehicle deleted successfully" });
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err });
+    });
 });
 
 router.post("/register-vehicle", async (req, res) => {
@@ -108,7 +128,7 @@ router.put("/update-vehicle/:id", async (req, res) => {
     res.status(400).json({ error: error });
   } else {
     vehicleModel.findByIdAndUpdate(req.params.id, value, { new: false }, () =>
-      res.status(200).json({ message: "Vehicle details updated successfully" }),
+      res.status(200).json({ message: "Vehicle details updated successfully" })
     );
   }
 });
@@ -133,37 +153,43 @@ router.get("/", (req, res) => {
   return res.status(200).json({ message: "test" });
 });
 
-//validation for vehicle type registration & update
+//validation for vehicle-type register & update
 async function validateVehicleType(vehicleType, isUpdate = false, id = null) {
   let query = vehicleTypeModel
     .find()
     .where("type")
     .equals(vehicleType.type.toLowerCase());
+  //extend the query if the request is update
   if (isUpdate) query.where("_id").ne(id);
-  const validation = await query.exec().then((types) => {
-    if (types.length >= 1) {
-      return { error: "Vehicle type already registered", value: {} };
-    }
+  const validation = await query
+    .exec()
+    .then((types) => {
+      if (types.length >= 1) {
+        return { error: "Vehicle type already registered", value: {} };
+      }
 
-    const schema = Joi.object().keys({
-      type: Joi.string()
-        .pattern(
-          new RegExp(
-            /^[A-Za-z0-9 ]*[A-Za-z0-9][A-Za-z0-9 ]*$/, //allow only letter, numbers & spaces
-          ),
-        )
-        .lowercase()
-        .trim()
-        .required(),
-      capacity: {
-        volume: Joi.number().min(1).required(),
-        max_load: Joi.number().min(10).required(),
-      },
-      fuel_economy: Joi.number().min(1).required(),
+      const schema = Joi.object().keys({
+        type: Joi.string()
+          .pattern(
+            new RegExp(
+              /^[A-Za-z0-9 ]*[A-Za-z0-9][A-Za-z0-9 ]*$/ //allow only letter, numbers & spaces
+            )
+          )
+          .lowercase()
+          .trim()
+          .required(),
+        capacity: {
+          volume: Joi.number().min(1).required(),
+          max_load: Joi.number().min(10).required(),
+        },
+        fuel_economy: Joi.number().min(1).required(),
+      });
+
+      return schema.validate(vehicleType, { abortEarly: false });
+    })
+    .catch((err) => {
+      return { error: err, value: {} };
     });
-
-    return schema.validate(vehicleType, { abortEarly: false });
-  });
   return validation;
 }
 
@@ -210,8 +236,8 @@ async function validateVehicle(vehicle, isUpdate = false, id = null) {
           .trim()
           .pattern(
             new RegExp(
-              /^[A-Za-z]{2,3}[0-9]{4}$/, //regex for licence plate no
-            ),
+              /^[A-Za-z]{2,3}[0-9]{4}$/ //regex for licence plate no
+            )
           )
           .uppercase()
           .required(),
