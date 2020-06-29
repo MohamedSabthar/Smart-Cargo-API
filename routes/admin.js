@@ -41,23 +41,22 @@ router.post("/register-vehicle-type", async (req, res) => {
   const { error, value } = await validateVehicleType(req.body);
 
   //checking for bad(400) request error
-  if (error) res.status(400).json({ error: error });
-  else {
-    const vehicleType = new vehicleTypeModel(value);
+  if (error) return res.status(400).json({ error: error });
 
-    vehicleType
-      .save()
-      .then((result) => {
-        return res.status(201).json({
-          message: "vehicle type registered successfully",
-        });
-      })
-      .catch((err) => {
-        return res.status(500).json({
-          error: err,
-        });
+  const vehicleType = new vehicleTypeModel(value);
+
+  vehicleType
+    .save()
+    .then((result) => {
+      return res.status(201).json({
+        message: "vehicle type registered successfully",
       });
-  }
+    })
+    .catch((err) => {
+      return res.status(500).json({
+        error: err,
+      });
+    });
 });
 
 router.put("/update-vehicle-type/:id", async (req, res) => {
@@ -65,23 +64,22 @@ router.put("/update-vehicle-type/:id", async (req, res) => {
   const { error, value } = await validateVehicleType(
     req.body,
     true,
-    req.params.id
+    req.params.id,
   );
-  if (error) {
-    res.status(400).json({ error: error });
-  } else {
-    vehicleTypeModel
-      .findByIdAndUpdate(req.params.id, value, { new: false })
-      .exec()
-      .then((vehicleType) => {
-        //checking if given id does not exist in the database
-        if (!vehicleType)
-          return res.status(400).json({ error: "Vehicle type not found" });
-        return res
-          .status(200)
-          .json({ message: "Vehicle Type updated successfully" });
-      });
-  }
+
+  if (error) return res.status(400).json({ error: error });
+
+  vehicleTypeModel
+    .findByIdAndUpdate(req.params.id, value, { new: false })
+    .exec()
+    .then((vehicleType) => {
+      //checking if given id does not exist in the database
+      if (!vehicleType)
+        return res.status(400).json({ error: "Vehicle type not found" });
+      return res
+        .status(200)
+        .json({ message: "Vehicle Type updated successfully" });
+    });
 });
 
 router.delete("/delete-vehicle-type/:id", (req, res) => {
@@ -103,44 +101,39 @@ router.post("/register-vehicle", async (req, res) => {
   //validating the vehicle request
   const { error, value } = await validateVehicle(req.body);
   //checking for bad(400) request error
-  if (error) res.status(400).json({ error: error });
-  else {
-    const vehicle = new vehicleModel(value);
+  if (error) return res.status(400).json({ error: error });
 
-    vehicle
-      .save()
-      .then((result) => {
-        return res.status(201).json({
-          message: "vechile registered successfully",
-        });
-      })
-      .catch((err) => {
-        return res.status(500).json({
-          error: err,
-        });
+  const vehicle = new vehicleModel(value);
+
+  vehicle
+    .save()
+    .then((result) => {
+      return res.status(201).json({
+        message: "vechile registered successfully",
       });
-  }
+    })
+    .catch((err) => {
+      return res.status(500).json({
+        error: err,
+      });
+    });
 });
 
 router.put("/update-vehicle/:id", async (req, res) => {
   const { error, value } = await validateVehicle(req.body, true, req.params.id);
-  if (error) {
-    res.status(400).json({ error: error });
-  } else {
-    vehicleModel
-      .findByIdAndUpdate(req.params.id, value, { new: false })
-      .exec()
-      .then((vehicle) => {
-        if (!vehicle)
-          return res.status(400).json({ error: "Invalid vehicle id provided" });
-        res
-          .status(200)
-          .json({ message: "Vehicle details updated successfully" });
-      })
-      .catch((err) => {
-        res.status(500).json({ error: err });
-      });
-  }
+  if (error) return res.status(400).json({ error: error });
+
+  vehicleModel
+    .findByIdAndUpdate(req.params.id, value, { new: false })
+    .exec()
+    .then((vehicle) => {
+      if (!vehicle)
+        return res.status(400).json({ error: "Invalid vehicle id provided" });
+      res.status(200).json({ message: "Vehicle details updated successfully" });
+    })
+    .catch((err) => {
+      res.status(500).json({ error: err });
+    });
 });
 
 router.delete("/delete-vehicle/:id", (req, res) => {
@@ -159,6 +152,27 @@ router.delete("/delete-vehicle/:id", (req, res) => {
     });
 });
 
+router.put("/repair-vehicle/:id", (req, res) => {
+  const { error, value } = validateRepair(req.body); // here value is an object with on_repair key and boolean value
+  if (error) return res.status(400).json({ error: error });
+  vehicleModel
+    .findByIdAndUpdate(req.params.id, {
+      $set: value,
+    })
+    .exec()
+    .then((vehicle) => {
+      //checkig whether the given id exist in database
+      if (!vehicle)
+        return res.status(400).json({ error: "Invalid id provided" });
+      return res.status(200).json({ message: "Vehicle repair status updated" });
+    })
+    .catch((err) => {
+      return res.status(500).json({
+        error: err,
+      });
+    });
+});
+
 router.get("/", (req, res) => {
   return res.status(200).json({ message: "test" });
 });
@@ -169,8 +183,10 @@ async function validateVehicleType(vehicleType, isUpdate = false, id = null) {
     .find()
     .where("type")
     .equals(vehicleType.type.toLowerCase());
+
   //extend the query if the request is update
   if (isUpdate) query.where("_id").ne(id);
+
   const validation = await query
     .exec()
     .then((types) => {
@@ -182,8 +198,8 @@ async function validateVehicleType(vehicleType, isUpdate = false, id = null) {
         type: Joi.string()
           .pattern(
             new RegExp(
-              /^[A-Za-z0-9 ]*[A-Za-z0-9][A-Za-z0-9 ]*$/ //allow only letter, numbers & spaces
-            )
+              /^[A-Za-z0-9 ]*[A-Za-z0-9][A-Za-z0-9 ]*$/, //allow only letter, numbers & spaces
+            ),
           )
           .lowercase()
           .trim()
@@ -246,8 +262,8 @@ async function validateVehicle(vehicle, isUpdate = false, id = null) {
           .trim()
           .pattern(
             new RegExp(
-              /^[A-Za-z]{2,3}[0-9]{4}$/ //regex for licence plate no
-            )
+              /^[A-Za-z]{2,3}[0-9]{4}$/, //regex for licence plate no
+            ),
           )
           .uppercase()
           .required(),
@@ -260,6 +276,14 @@ async function validateVehicle(vehicle, isUpdate = false, id = null) {
       return { error: err, value: {} };
     });
   return validation;
+}
+
+//validation for repair-vehicle request
+function validateRepair(request) {
+  const schema = Joi.object().keys({
+    on_repair: Joi.bool().required(),
+  });
+  return schema.validate(request);
 }
 
 module.exports = router;
