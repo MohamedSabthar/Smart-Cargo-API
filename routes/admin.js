@@ -39,7 +39,7 @@ router.post("/register-driver", (req, res) => {
 //storekeeper registration
 router.post('/register-storekeeper', adminMiddleware, (req, res) => {
   //validate store keeper
-  const { error, value } = validateDriver(req.body);
+  const { error, value } = validateStoreKeeper(req.body);
 
   if(error) res.status(400).json({ erroe : error });
   else {
@@ -56,7 +56,7 @@ router.post('/register-storekeeper', adminMiddleware, (req, res) => {
           userModel.find({ 'contact.email': user.contact.email }, function(err, docs) {
       if (docs.length) {
         return res.status(500).json({
-          message: 'driver already inserted',
+          message: 'Strore keeper already inserted',
           error: err
         });
       } else {
