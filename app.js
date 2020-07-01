@@ -30,6 +30,9 @@ app.use("/auth", authRoute);
 const adminRoute = require("./routes/admin");
 app.use("/admin", adminRoute);
 
+const storekeeperRoute = require("./routes/storekeeper");
+app.use('/storekeeper', storekeeperRoute);
+
 //root end-point
 app.get("/", (req, res) => {
   res.status(200).json({

@@ -16,6 +16,9 @@ const userSchema = new mongoose.Schema({
   role: { type: String },
   password: { type: String },
 
+  //to validate password reset
+  reset_token: {type:String},
+
   //driver specific details
   license_no: { type: String },
   allowed_vehicle: { type: [mongoose.Schema.Types.ObjectId] }, // contians list of _id from vechicleTypeModel

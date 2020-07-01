@@ -9,64 +9,44 @@ const vehicleModel = require("../models/vehicle");
 const adminMiddleware = require("../middleware/admin-middleware");
 const { route } = require("./customer");
 
-//driver-registration
-router.post("/register-driver", adminMiddleware, (req, res) => {
-  
-  const { error, value } =  validateDriver(req.body);
-  
-  if (error) res.status(400).json({ error: error });
-  else {
-    
-    bcrypt.hash(req.body.password, 10, (err, hash) => {
-      if (err) {
-        return res.status(500).json({
-          error: err,
-        });
-      }
-      req.body.password = hash; //store the hashed password
-      req.body.role = "driver"; //set the role to driver
-      const user = new userModel(req.body);
-  
-       //validating customer order request
-  
-     
-      
-      //email validation for distinct data
-      userModel.find({"contact.email":user.contact.email}, function (err, docs) {
-        if (docs.length){
-          return res.status(500).json({
-            message: "driver already inserted",
-            error: err,
-          });
-        }else{
-          user
-          .save()
-          .then((result) => {
-            return res.status(201).json({
-              message: "driver registered successfully",
-            });
-          })
-          .catch((err) => {
-            return res.status(500).json({
-              error: err,
-            });
-          });
-        }
-    });
-  
-  
-  
-      
-    });
+//only admin can execute all the functions implemented here
+// router.use(adminMiddleware);
 
-  }
-  
-  
- 
+//driver-registration
+router.post("/register-driver", async (req, res) => {
+  bcrypt.hash(req.body.password, 10, (err, hash) => {
+    if (err) {
+      return res.status(500).json({
+        error: err,
+      });
+    }
+    req.body.password = hash; //store the hashed password
+  });
+
+  req.body.role = "driver"; //set the role to driver
+  //validating driver registration
+  const { error, value } = await validateDriver(req.body);
+
+  //checking for bad(400) request error
+  if (error) return res.status(400).json({ error: error });
+  const user = new userModel(value);
+
+  user
+    .save()
+    .then((result) => {
+      return res.status(201).json({
+        message: "driver registered successfully",
+      });
+    })
+    .catch((err) => {
+      return res.status(500).json({
+        error: err,
+      });
+    });
 });
 
 //update driver
-router.post("/update-driver/:userId", adminMiddleware, (req, res) => {
+router.post("/update-driver/:userId", async (req, res) => {
   bcrypt.hash(req.body.password, 10, (err, hash) => {
     if (err) {
       return res.status(500).json({
@@ -75,68 +55,46 @@ router.post("/update-driver/:userId", adminMiddleware, (req, res) => {
     }
     req.body.password = hash; //store the hashed password
     const id = req.params.userId;
-
-    userModel
-      .findByIdAndUpdate({ _id: id }, {$set: req.body})
-      .then((result) => {
-        return res.status(201).json({
-          message: "driver updated successfully",
-        });
-      })
-      .catch((err) => {
-        return res.status(500).json({
-          error: err,
-        });
-      });
   });
+
+  const { error, value } = await validateDriver(req.body);
+
+  //checking for bad(400) request error
+  if (error) return res.status(400).json({ error: error });
+
+  userModel
+    .findByIdAndUpdate({ _id: id }, { $set: req.body })
+    .then((result) => {
+      return res.status(201).json({
+        message: "driver updated successfully",
+      });
+    })
+    .catch((err) => {
+      return res.status(500).json({
+        error: err,
+      });
+    });
 });
 
 //delete driver
-router.delete("/delete-driver/:userId", adminMiddleware, (req, res) => { 
+router.delete("/delete-driver/:userId", (req, res) => {
   const id = req.params.userId;
-  userModel.findByIdAndDelete({ _id: id })
+  userModel
+    .findByIdAndDelete({ _id: id })
     .then((result) => {
       return res.status(201).json({
         message: "driver deleted successfully",
       });
-    }).catch((err) => {
+    })
+    .catch((err) => {
       return res.status(500).json({
         error: err,
       });
-     });
-});
-
-
-
-//storekeeper registration
-router.post("/register-storekeeper", adminMiddleware, (req, res) => {
-  bcrypt.hash(req.body.password, 10, (err, hash) => {
-    if (err) {
-      return res.status(500).json({
-        error: err,
-      });
-    }
-    req.body.password = hash; //store the hashed password
-    req.body.role = "storekeeper"; //set the role to driver
-    const user = new userModel(req.body);
-
-    user
-      .save()
-      .then((result) => {
-        return res.status(201).json({
-          message: "storekeeper registered successfully",
-        });
-      })
-      .catch((err) => {
-        return res.status(500).json({
-          error: err,
-        });
-      });
-  });
+    });
 });
 
 //update storekeeper
-router.post("/update-storekeeper/:userId", adminMiddleware, (req, res) => {
+router.post("/update-storekeeper/:userId", (req, res) => {
   bcrypt.hash(req.body.password, 10, (err, hash) => {
     if (err) {
       return res.status(500).json({
@@ -147,7 +105,7 @@ router.post("/update-storekeeper/:userId", adminMiddleware, (req, res) => {
     const id = req.params.userId;
 
     userModel
-      .findByIdAndUpdate({ _id: id }, {$set: req.body})
+      .findByIdAndUpdate({ _id: id }, { $set: req.body })
       .then((result) => {
         return res.status(201).json({
           message: "storekeeper updated successfully",
@@ -162,25 +120,108 @@ router.post("/update-storekeeper/:userId", adminMiddleware, (req, res) => {
 });
 
 //delete storekeeper
-router.delete("/delete-storekeeper/:userId", adminMiddleware, (req, res) => { 
+router.delete("/delete-storekeeper/:userId", (req, res) => {
   const id = req.params.userId;
-  userModel.findByIdAndDelete({ _id: id })
+  userModel
+    .findByIdAndDelete({ _id: id })
     .then((result) => {
       return res.status(201).json({
         message: "storekeeper deleted successfully",
       });
-    }).catch((err) => {
+    })
+    .catch((err) => {
       return res.status(500).json({
         error: err,
       });
-     });
+    });
 });
 
+//storekeeper registration
+router.post("/register-storekeeper", (req, res) => {
+  //validate store keeper
+  const { error, value } = validateDriver(req.body);
 
+  if (error) res.status(400).json({ erroe: error });
+  else {
+    bcrypt.hash(req.body.password, 10, (err, hash) => {
+      if (err) {
+        return res.status(500).json({
+          error: err,
+        });
+      }
+      req.body.password = hash; //store the hashed password
+      req.body.role = "storekeeper"; //set the role to storekeeper
+      const user = new userModel(req.body);
 
+      userModel.find({ "contact.email": user.contact.email }, function (
+        err,
+        docs
+      ) {
+        if (docs.length) {
+          return res.status(500).json({
+            message: "driver already inserted",
+            error: err,
+          });
+        } else {
+          user
+            .save()
+            .then((result) => {
+              return res.status(201).json({
+                message: "store keeper registered successfully",
+              });
+            })
+            .catch((err) => {
+              return res.status(500).json({
+                error: err,
+              });
+            });
+        }
+      });
+    });
+  }
+});
 
-router.post("/register-vehicle-type", adminMiddleware, (req, res) => {
-  const vehicleType = new vehicleTypeModel(req.body);
+//validate function for store keeper
+function validateStoreKeeper(user) {
+  const schema = Joi.object().keys({
+    name: {
+      first: Joi.string().alpah().required(),
+      middle: Joi.string().alpah(),
+      last: Joi.string().alpah().required(),
+    },
+    contact: {
+      email: Joi.string().email().required(),
+      phone: Joi.string().pattern(
+        new RegExp(
+          /^(?:0|94|\+94)?(?:(11|21|23|24|25|26|27|31|32|33|34|35|36|37|38|41|45|47|51|52|54|55|57|63|65|66|67|81|912)(0|2|3|4|5|7|9)|7(0|1|2|5|6|7|8)\d)\d{6}$/
+        )
+      ),
+    },
+    address: {
+      no: Joi.string().required(),
+      street: Joi.string().required(),
+      city: Joi.string().required(),
+    },
+    role: Joi.string().required(),
+    password: Joi.string()
+      .min(8)
+      .regex(/[A-Z]/, "upper-case")
+      .regex(/[a-z]/, "lower-case")
+      .regex(/[^\w]/, "special character")
+      .required(),
+  });
+
+  return schema.validate(user, { abortEarly: false });
+}
+
+router.post("/register-vehicle-type", async (req, res) => {
+  //validating vehicle type registration
+  const { error, value } = await validateVehicleType(req.body);
+
+  //checking for bad(400) request error
+  if (error) return res.status(400).json({ error: error });
+
+  const vehicleType = new vehicleTypeModel(value);
 
   vehicleType
     .save()
@@ -196,8 +237,51 @@ router.post("/register-vehicle-type", adminMiddleware, (req, res) => {
     });
 });
 
-router.post("/register-vehicle", adminMiddleware, (req, res) => {
-  const vehicle = new vehicleModel(req.body);
+router.put("/update-vehicle-type/:id", async (req, res) => {
+  //validating the update request data
+  const { error, value } = await validateVehicleType(
+    req.body,
+    true,
+    req.params.id
+  );
+
+  if (error) return res.status(400).json({ error: error });
+
+  vehicleTypeModel
+    .findByIdAndUpdate(req.params.id, value, { new: false })
+    .exec()
+    .then((vehicleType) => {
+      //checking if given id does not exist in the database
+      if (!vehicleType)
+        return res.status(400).json({ error: "Vehicle type not found" });
+      return res
+        .status(200)
+        .json({ message: "Vehicle Type updated successfully" });
+    });
+});
+
+router.delete("/delete-vehicle-type/:id", (req, res) => {
+  vehicleTypeModel
+    .findByIdAndDelete(req.params.id)
+    .exec()
+    .then((vehicleType) => {
+      //checking if given id does not exist in the database
+      if (!vehicleType)
+        return res.status(400).json({ error: "Vehicle type not found" });
+      return res.status(200).json({ message: "vehicle deleted successfully" });
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err });
+    });
+});
+
+router.post("/register-vehicle", async (req, res) => {
+  //validating the vehicle request
+  const { error, value } = await validateVehicle(req.body);
+  //checking for bad(400) request error
+  if (error) return res.status(400).json({ error: error });
+
+  const vehicle = new vehicleModel(value);
 
   vehicle
     .save()
@@ -213,45 +297,219 @@ router.post("/register-vehicle", adminMiddleware, (req, res) => {
     });
 });
 
-router.get("/", adminMiddleware, (req, res) => {
+router.put("/update-vehicle/:id", async (req, res) => {
+  const { error, value } = await validateVehicle(req.body, true, req.params.id);
+  if (error) return res.status(400).json({ error: error });
+
+  vehicleModel
+    .findByIdAndUpdate(req.params.id, value, { new: false })
+    .exec()
+    .then((vehicle) => {
+      if (!vehicle)
+        return res.status(400).json({ error: "Invalid vehicle id provided" });
+      res.status(200).json({ message: "Vehicle details updated successfully" });
+    })
+    .catch((err) => {
+      res.status(500).json({ error: err });
+    });
+});
+
+router.delete("/delete-vehicle/:id", (req, res) => {
+  vehicleModel
+    .findByIdAndDelete(req.params.id)
+    .exec()
+    .then((vehicle) => {
+      //checking whether the given id already exist in database
+      if (!vehicle) return res.status(400).json({ error: "vehicle not found" });
+      return res.status(200).json({ message: "vehicle deleted successfully" });
+    })
+    .catch((err) => {
+      return res.status(500).json({
+        error: err,
+      });
+    });
+});
+
+router.put("/repair-vehicle/:id", (req, res) => {
+  const { error, value } = validateRepair(req.body); // here value is an object with on_repair key and boolean value
+  if (error) return res.status(400).json({ error: error });
+  vehicleModel
+    .findByIdAndUpdate(req.params.id, {
+      $set: value,
+    })
+    .exec()
+    .then((vehicle) => {
+      //checkig whether the given id exist in database
+      if (!vehicle)
+        return res.status(400).json({ error: "Invalid id provided" });
+      return res.status(200).json({ message: "Vehicle repair status updated" });
+    })
+    .catch((err) => {
+      return res.status(500).json({
+        error: err,
+      });
+    });
+});
+
+router.get("/", (req, res) => {
   return res.status(200).json({ message: "test" });
 });
 
-
-
 //validation function for driver
-function validateDriver(user) {
-  const schema = Joi.object().keys({
+async function validateDriver(user, isUpdate = false, id = null) {
+  let query = userModel.find({
+    "contact.email": user.contact.email.toLowerCase(),
+  });
 
-    name: {
-      first: Joi.string().required(),
-      middle: Joi.string(),
-      last: Joi.string().required(),
-    },
-    contact: { email: Joi.string().email().required(), phone: Joi.string().pattern(
-      new RegExp(
-        /^(?:0|94|\+94)?(?:(11|21|23|24|25|26|27|31|32|33|34|35|36|37|38|41|45|47|51|52|54|55|57|63|65|66|67|81|912)(0|2|3|4|5|7|9)|7(0|1|2|5|6|7|8)\d)\d{6}$/,
-      ),
-    ), },
-    address: {
-      no: Joi.string().required(),
-      street: Joi.string().required(),
-      city: Joi.string().required(),
-    },
-    role: Joi.string().required(),
-    password: Joi.required(),
-  
-    //driver specific details
-     license_no: Joi.string().required(),
-     allowed_vehicle: Joi.number().required(), // contians list of _id from vechicleTypeModel
-  }
-);
+  //extend the query if the request is update
+  if (isUpdate) query.where("_id").ne(id);
 
-  return schema.validate(user);
+  const validation = await query
+    .exec()
+    .then((drivers) => {
+      if (drivers.length >= 1) {
+        return { error: "Driver is already registered", value: {} };
+      }
+
+      const schema = Joi.object().keys({
+        name: {
+          first: Joi.string()
+            .pattern(/^[A-Za-z]+$/)
+            .required(),
+          middle: Joi.string().required(),
+          last: Joi.string().required(),
+        },
+        contact: {
+          email: Joi.string().email().required().lowercase(),
+          phone: Joi.string().pattern(
+            /^(?:0|94|\+94)?(?:(11|21|23|24|25|26|27|31|32|33|34|35|36|37|38|41|45|47|51|52|54|55|57|63|65|66|67|81|912)(0|2|3|4|5|7|9)|7(0|1|2|5|6|7|8)\d)\d{6}$/
+          ),
+        },
+        address: {
+          no: Joi.string().required(),
+          street: Joi.string().required(),
+          city: Joi.string().required(),
+        },
+        role: Joi.string().required(),
+        password: Joi.string().required().min(8),
+
+        //driver specific details
+        license_no: Joi.string(),
+        allowed_vehicle: Joi.array().items(Joi.string()), // contians list of _id from vechicleTypeModel
+      });
+
+      return schema.validate(user, { abortEarly: false });
+    })
+    .catch((err) => {
+      return { error: err, value: {} };
+    });
+  return validation;
 }
 
+//validation for vehicle-type register & update
+async function validateVehicleType(vehicleType, isUpdate = false, id = null) {
+  let query = vehicleTypeModel
+    .find()
+    .where("type")
+    .equals(vehicleType.type.toLowerCase());
 
+  //extend the query if the request is update
+  if (isUpdate) query.where("_id").ne(id);
 
+  const validation = await query
+    .exec()
+    .then((types) => {
+      if (types.length >= 1) {
+        return { error: "Vehicle type already registered", value: {} };
+      }
+
+      const schema = Joi.object().keys({
+        type: Joi.string()
+          .pattern(
+            /^[A-Za-z0-9 ]*[A-Za-z0-9][A-Za-z0-9 ]*$/ //allow only letter, numbers & spaces
+          )
+          .lowercase()
+          .trim()
+          .required(),
+        capacity: {
+          volume: Joi.number().min(1).required(),
+          max_load: Joi.number().min(10).required(),
+        },
+        fuel_economy: Joi.number().min(1).required(),
+      });
+
+      return schema.validate(vehicleType, { abortEarly: false });
+    })
+    .catch((err) => {
+      return { error: err, value: {} };
+    });
+  return validation;
+}
+
+//validation for vehicle update & register
+async function validateVehicle(vehicle, isUpdate = false, id = null) {
+  const validation = await vehicleTypeModel
+    .findById(vehicle.type_id)
+    .exec()
+    .then(async (type) => {
+      console.log(type);
+      //checking for valid vehicle-type
+      if (!type) {
+        return { error: "Invalid vehicle type selected", value: {} };
+      }
+
+      let query = vehicleModel
+        .where("license_plate")
+        .equals(vehicle.license_plate.trim().toUpperCase());
+
+      //if validation for update then exclude current vehicle document while checking unique license no
+      if (isUpdate) {
+        query.where("_id").ne(id);
+      }
+
+      let isVehicleAlreadyExist = await query
+        .exec()
+        .then((vehicles) => {
+          if (vehicles.length >= 1)
+            //return error if licensce no already exit else return false
+            return { error: "Licence plate no already exists", value: {} };
+          return false;
+        })
+        .catch((err) => {
+          return { error: err, value: {} };
+        });
+
+      if (isVehicleAlreadyExist)
+        // return the {error,value} object if vehicle already exists
+        return isVehicleAlreadyExist;
+
+      const schema = Joi.object().keys({
+        type_id: Joi.string().trim().required(),
+        license_plate: Joi.string()
+          .trim()
+          .pattern(
+            /^[A-Za-z]{2,3}[0-9]{4}$/ //regex for licence plate no
+          )
+          .uppercase()
+          .required(),
+        on_repair: Joi.bool(),
+      });
+
+      return schema.validate(vehicle, { abortEarly: false });
+    })
+    .catch((err) => {
+      return { error: err, value: {} };
+    });
+  return validation;
+}
+
+//validation for repair-vehicle request
+function validateRepair(request) {
+  const schema = Joi.object().keys({
+    on_repair: Joi.bool().required(),
+  });
+  return schema.validate(request);
+}
 
 module.exports = router;
 
