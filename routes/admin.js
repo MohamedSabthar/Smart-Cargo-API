@@ -7,10 +7,10 @@ const vehicleTypeModel = require("../models/vehicle-type");
 const vehicleModel = require("../models/vehicle");
 
 const adminMiddleware = require("../middleware/admin-middleware");
-const { route } = require("./customer");
+
 
 //only admin can execute all the functions implemented here
-// router.use(adminMiddleware);
+ router.use(adminMiddleware);
 
 //driver-registration
 router.post("/register-driver", async (req, res) => {
