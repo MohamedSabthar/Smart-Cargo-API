@@ -139,14 +139,15 @@ router.delete("/delete-storekeeper/:userId", (req, res) => {
 //storekeeper registration
 router.post("/register-storekeeper", (req, res) => {
   //validate store keeper
-  const { error, value } = validateDriver(req.body);
+  const { error, value } = validateStoreKeeper(req.body);
 
   if (error) res.status(400).json({ erroe: error });
   else {
     bcrypt.hash(req.body.password, 10, (err, hash) => {
       if (err) {
         return res.status(500).json({
-          error: err,
+          message: 'Strore keeper already inserted',
+          error: err
         });
       }
       req.body.password = hash; //store the hashed password
