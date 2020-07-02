@@ -51,7 +51,7 @@ module.exports = router;
 // sample data
 
 // {
-//   "location": {"lat":1.234,"long":4.566},
+//   "location": {"lat":1.234,"lang":4.566},
 //   "products": [
 //     {"item":"#79079" , "quantity" : 25},
 //     {"item":"#79079" , "quantity" : 25},

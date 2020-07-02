@@ -296,7 +296,7 @@ async function validateVehicleType(vehicleType, isUpdate = false, id = null) {
 //validation for vehicle update & register
 async function validateVehicle(vehicle, isUpdate = false, id = null) {
   const validation = await vehicleTypeModel
-    .findById(vehicle.type_id)
+    .findById(vehicle.vehicle_type)
     .exec()
     .then(async (type) => {
       console.log(type);
@@ -331,7 +331,7 @@ async function validateVehicle(vehicle, isUpdate = false, id = null) {
         return isVehicleAlreadyExist;
 
       const schema = Joi.object().keys({
-        type_id: Joi.string().trim().required(),
+        vehicle_type: Joi.string().trim().required(),
         license_plate: Joi.string()
           .trim()
           .pattern(
