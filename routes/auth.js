@@ -85,6 +85,12 @@ router.post("/sign-in", (req, res) => {
 
 //this post method will send an forgot password email to the user
 router.post("/forgot-password", (req, res) => {
+
+  //if no email provided in the request then send error
+  if(!req.body.email) return  res.status(400).json({
+    message: "Your email doesn't match with our record",
+  });
+
   userModel
     .findOne()
     .where("contact.email")
@@ -135,10 +141,12 @@ router.put("/reset-password/:token", (req, res) => {
       .exec()
       .then((user) => {
         //if no users found then the token is invalid
-        if (!user)
+        if (!user || user.reset_token != req.params.token)
           return res
             .status(400)
             .json({ error: "Invalid password reset token: please request for password reset" });
+
+            console.log(user);
 
         // checking for the invalidity of the token
         if (tokenParams[2] < Date.now())
