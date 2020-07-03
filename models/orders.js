@@ -10,7 +10,8 @@ const orderSchema = new mongoose.Schema({
   ],
   email: { type: String },
   phone: { type: String },
-  emergency_level : { type: Number },  // an order can take high/medium/low emergacy_level (3,2,1)
+  emergency_level : { type: Number },  // an order can take high/medium/low emergacy_level (1,2,3)
+  status : {type:String , default:"pending"}, // store the order status (ready,pending,delivered,sheduled)
 
   //these data will get populated by store-keeper
   volume: { type: Number }, 
