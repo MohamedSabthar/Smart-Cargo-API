@@ -138,13 +138,13 @@ router.put("/reset-password/:token", (req, res) => {
         if (!user)
           return res
             .status(400)
-            .json({ error: "Invalid token provided" });
+            .json({ error: "Invalid password reset token: please request for password reset" });
 
         // checking for the invalidity of the token
         if (tokenParams[2] < Date.now())
           return res
             .status(400)
-            .json({ error: "Request for pasword reset is expired" });
+            .json({ error: "Request for pasword reset is expired: : please request for a new password reset" });
 
         //need to add password validation here
 
@@ -170,7 +170,7 @@ router.put("/reset-password/:token", (req, res) => {
         });
       });
   } catch {
-    return res.status(400).json({ error: "Incorrect validity token provided" });
+    return res.status(400).json({ error: "Invalid password reset token: please request for password reset" });
   }
 });
 

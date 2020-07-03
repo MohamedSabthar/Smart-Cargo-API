@@ -29,7 +29,7 @@ function validateOrder(order) {
   const schema = Joi.object().keys({
     location: {
       lat: Joi.number().required(),
-      long: Joi.number().required(),
+      lang: Joi.number().required(),
     },
     products: Joi.array().items({
       item: Joi.string().required(),
@@ -51,7 +51,7 @@ module.exports = router;
 // sample data
 
 // {
-//   "location": {"lat":1.234,"long":4.566},
+//   "location": {"lat":1.234,"lang":4.566},
 //   "products": [
 //     {"item":"#79079" , "quantity" : 25},
 //     {"item":"#79079" , "quantity" : 25},
