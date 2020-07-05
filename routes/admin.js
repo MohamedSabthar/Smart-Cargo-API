@@ -65,14 +65,12 @@ router.post("/update-driver/:userId", async (req, res) => {
   userModel
     .findByIdAndUpdate({ _id: id }, { $set: req.body })
     .then((result) => {
-      return res.status(201).json({
-        message: "driver updated successfully",
-      });
-    })
-    .catch((err) => {
-      return res.status(500).json({
-        error: err,
-      });
+      //checking if given id does not exist in the database
+      if (!result)
+        return res.status(400).json({ error: "Driver not found" });
+      return res
+        .status(200)
+        .json({ message: "Driver updated successfully" });
     });
 });
 
@@ -82,14 +80,13 @@ router.delete("/delete-driver/:userId", (req, res) => {
   userModel
     .findByIdAndDelete({ _id: id })
     .then((result) => {
-      return res.status(201).json({
-        message: "driver deleted successfully",
-      });
+      //checking if given id does not exist in the database
+      if (!result)
+        return res.status(400).json({ error: "Driver not found" });
+      return res.status(200).json({ message: "Driver deleted successfully" });
     })
     .catch((err) => {
-      return res.status(500).json({
-        error: err,
-      });
+      return res.status(500).json({ error: err });
     });
 });
 
@@ -136,83 +133,85 @@ router.delete("/delete-storekeeper/:userId", (req, res) => {
     });
 });
 
-//storekeeper registration
-router.post("/register-storekeeper", (req, res) => {
-  //validate store keeper
-  const { error, value } = validateStoreKeeper(req.body);
+//driver-registration
+router.post("/register-storekeeper", async (req, res) => {
+  bcrypt.hash(req.body.password, 10, (err, hash) => {
+    if (err) {
+      return res.status(500).json({
+        error: err,
+      });
+    }
+    req.body.password = hash; //store the hashed password
+  });
 
-  if (error) res.status(400).json({ erroe: error });
-  else {
-    bcrypt.hash(req.body.password, 10, (err, hash) => {
-      if (err) {
-        return res.status(500).json({
-          message: 'Strore keeper already inserted',
-          error: err
-        });
-      }
-      req.body.password = hash; //store the hashed password
-      req.body.role = "storekeeper"; //set the role to storekeeper
-      const user = new userModel(req.body);
+  req.body.role = "storekeeper"; //set the role to driver
+  //validating driver registration
+  const { error, value } = await validateStoreKeeper(req.body);
 
-      userModel.find({ "contact.email": user.contact.email }, function (
-        err,
-        docs
-      ) {
-        if (docs.length) {
-          return res.status(500).json({
-            message: "driver already inserted",
-            error: err,
-          });
-        } else {
-          user
-            .save()
-            .then((result) => {
-              return res.status(201).json({
-                message: "store keeper registered successfully",
-              });
-            })
-            .catch((err) => {
-              return res.status(500).json({
-                error: err,
-              });
-            });
-        }
+  //checking for bad(400) request error
+  if (error) return res.status(400).json({ error: error });
+  const user = new userModel(value);
+
+  user
+    .save()
+    .then((result) => {
+      return res.status(201).json({
+        message: "Store-keeper registered successfully",
+      });
+    })
+    .catch((err) => {
+      return res.status(500).json({
+        error: err,
       });
     });
-  }
 });
 
 //validate function for store keeper
-function validateStoreKeeper(user) {
-  const schema = Joi.object().keys({
-    name: {
-      first: Joi.string().alpah().required(),
-      middle: Joi.string().alpah(),
-      last: Joi.string().alpah().required(),
-    },
-    contact: {
-      email: Joi.string().email().required(),
-      phone: Joi.string().pattern(
-        new RegExp(
-          /^(?:0|94|\+94)?(?:(11|21|23|24|25|26|27|31|32|33|34|35|36|37|38|41|45|47|51|52|54|55|57|63|65|66|67|81|912)(0|2|3|4|5|7|9)|7(0|1|2|5|6|7|8)\d)\d{6}$/
-        )
-      ),
-    },
-    address: {
-      no: Joi.string().required(),
-      street: Joi.string().required(),
-      city: Joi.string().required(),
-    },
-    role: Joi.string().required(),
-    password: Joi.string()
-      .min(8)
-      .regex(/[A-Z]/, "upper-case")
-      .regex(/[a-z]/, "lower-case")
-      .regex(/[^\w]/, "special character")
-      .required(),
+async function validateStoreKeeper(user, isUpdate = false, id = null) {
+  let query = userModel.find({
+    "contact.email": user.contact.email.toLowerCase(),
   });
 
-  return schema.validate(user, { abortEarly: false });
+  //extend the query if the request is update
+  if (isUpdate) query.where("_id").ne(id);
+
+  const validation = await query
+    .exec()
+    .then((drivers) => {
+      if (drivers.length >= 1) {
+        return { error: "Store-keeper is already registered", value: {} };
+      }
+
+      const schema = Joi.object().keys({
+        name: {
+          first: Joi.string()
+            .pattern(/^[A-Za-z]+$/)
+            .required(),
+          middle: Joi.string().required(),
+          last: Joi.string().required(),
+        },
+        contact: {
+          email: Joi.string().email().required().lowercase(),
+          phone: Joi.string().pattern(
+            /^(?:0|94|\+94)?(?:(11|21|23|24|25|26|27|31|32|33|34|35|36|37|38|41|45|47|51|52|54|55|57|63|65|66|67|81|912)(0|2|3|4|5|7|9)|7(0|1|2|5|6|7|8)\d)\d{6}$/
+          ),
+        },
+        address: {
+          no: Joi.string().required(),
+          street: Joi.string().required(),
+          city: Joi.string().required(),
+        },
+        role: Joi.string().required(),
+        password: Joi.string().required().min(8),
+
+      });
+
+      return schema.validate(user, { abortEarly: false });
+    })
+    .catch((err) => {
+      return { error: err, value: {} };
+    });
+  return validation;
 }
 
 router.post("/register-vehicle-type", async (req, res) => {
