@@ -414,54 +414,7 @@ router.delete('/delete-driver/:userId', adminMiddleware, (req, res) => {
 
 
 
-//update storekeeper
-router.fa-pull-right('/update-storekeeper/:userId', adminMiddleware, (req, res) => {
-  //validate update  store keeper
-  const { error, value } = validateDriver(req.body);
 
-  if(error) res.status(400).json({ erroe : error });
-  else {
-      bcrypt.hash(req.body.password, 10, (err, hash) => {
-          if (err) {
-              return res.status(500).json({
-                  error: err
-              });
-          }
-          req.body.password = hash; //store the hashed password
-          const id = req.params.userId;
-  
-          userModel
-              .findByIdAndUpdate({ _id: id }, { $set: req.body })
-              .then((result) => {
-                  return res.status(201).json({
-                      message: 'storekeeper updated successfully'
-                  });
-              })
-              .catch((err) => {
-                  return res.status(500).json({
-                      error: err
-                  });
-              });
-      });
-  }
-});
-
-//delete storekeeper
-router.delete('/delete-storekeeper/:userId', adminMiddleware, (req, res) => {
-  const id = req.params.userId;
-  userModel
-      .findByIdAndDelete({ _id: id })
-      .then((result) => {
-          return res.status(201).json({
-              message: 'storekeeper deleted successfully'
-          });
-      })
-      .catch((err) => {
-          return res.status(500).json({
-              error: err
-          });
-      });
-});
 
 //sample data for driver-registration
 
