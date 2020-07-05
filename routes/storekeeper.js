@@ -1,7 +1,12 @@
 const router = require("express").Router();
 const vehicleModel = require("../models/vehicle");
 const vehicleTypesModel = require("../models/vehicle-type");
+const orderModel = require("../models/orders");
 const storekeeperMiddleware = require("../middleware/storekeeper-middleware");
+
+const axios = require('axios'); // used to make request to routing engine
+const routingEngineLink = process.env.ROUTING_ENGINE || "http://localhost:8080"
+
 
 //only admin and storekeeper can execute all the functions implemented here
 router.use(storekeeperMiddleware);
@@ -64,6 +69,45 @@ router.get("/vehicle-types/:id", (req, res) => {
     .catch((err) => {
       return res.status(400).json({ error: err });
     });
+});
+
+router.post(`${routingEngineLink}/make-cluster`, async (req, res) => {
+  //get the curruntly available vehicles from the database;
+  const vehicles = await vehicleModel
+    .find()
+    .where("is_available")
+    .equals(true)
+    .where("on_repair")
+    .equals(false)
+    .populate({
+      path: "vehicle_type",
+      select: "-_id capacity",
+    })
+    .select("_id");
+
+  // get all the orders which are ready to deliver
+  const orders = await orderModel
+    .find()
+    .where("status")
+    .equals("ready")
+    .where("emergency_level").lte(1)
+    .select("_id location volume load");
+
+  const depot = {lat:1.2345,lang:2.903};
+
+  const enineParams = { vehicles , orders , depot };
+
+  axios.post('/make-cluster',enineParams )
+  .then( (response)=> {
+    console.log('finished');
+    return res.json(response.data);
+  })
+  .catch((error)=> {
+    console.log(error);
+  });
+
+  //console.log(vehicles);
+  //res.json({ message:"we are processing your request"});
 });
 
 module.exports = router;
