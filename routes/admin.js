@@ -607,7 +607,7 @@ async function validateDepot(depot, isUpdate = false, id = null) {
 
 
 
-//track vehicle 
+//track vehicle post
 router.post("/track-vehicle/:id", (req, res) => {
   trackVehicle={
     id:"1234",
@@ -618,6 +618,20 @@ router.post("/track-vehicle/:id", (req, res) => {
   ]
 }
     res.body=trackVehicle;
+
+  return res.status(201).json(res.body);
+     
+});
+
+//track vehicle get
+router.get("/track-vehicle",(req,res) =>{
+ data =[{licenseId:"1101",veicleNo:"1234",driverName:"sugan",DriverPhoneNo:"0717897654",vechileType:"lorry",orderDispatchTime:new Date()},
+ {licenseId:"1101",veicleNo:"1234",driverName:"sugan",DriverPhoneNo:"0717897654",vechileType:"lorry",orderDispatchTime:new Date()},
+ {licenseId:"1101",veicleNo:"1234",driverName:"sugan",DriverPhoneNo:"0717897654",vechileType:"lorry",orderDispatchTime:new Date()},
+ {licenseId:"1101",veicleNo:"1234",driverName:"sugan",DriverPhoneNo:"0717897654",vechileType:"lorry",orderDispatchTime:new Date()}
+ ]    
+
+    res.body=data;
 
   return res.status(201).json(res.body);
      
