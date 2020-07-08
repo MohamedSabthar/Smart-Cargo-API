@@ -11,7 +11,7 @@ const adminMiddleware = require("../middleware/admin-middleware");
 
 
 //only admin can execute all the functions implemented here
- router.use(adminMiddleware);
+ //router.use(adminMiddleware);
 
 //driver-registration
 router.post("/register-driver", async (req, res) => {
@@ -604,6 +604,25 @@ async function validateDepot(depot, isUpdate = false, id = null) {
     });
   return validation;
 }
+
+
+
+//track vehicle 
+router.post("/track-vehicle/:id", (req, res) => {
+  trackVehicle={
+    id:"1234",
+    driverId:"34",
+    schedule:[{orderId:"o13",lat:"7.98",lang:"8.07",status:"deliverd"},
+    {orderId:"o17",lat:"7.00",lang:"8.00",status:"pending"},
+    {orderId:"o45",lat:"8.98",lang:"9.07",status:"pending"}
+  ]
+}
+    res.body=trackVehicle;
+
+  return res.status(201).json(res.body);
+     
+});
+
 
 
 
