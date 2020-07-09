@@ -563,9 +563,7 @@ router.post("/update-depot/:depotId", async (req, res) => {
 
 
 async function validateDepot(depot, isUpdate = false, id = null) {
-  let query = depotModel.find({
-    "address": depot.address.toLowerCase(),
-  });
+  let query = depotModel.find();
 
   //extend the query if the request is update
   if (isUpdate) query.where("_id").ne(id);
