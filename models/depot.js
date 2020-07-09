@@ -5,4 +5,4 @@ const depotSchema = new mongoose.Schema({
   address: {type:String}
 });
 
-module.exports = mongoose.model("orders", depotSchema);
+module.exports = mongoose.model("depots", depotSchema);
