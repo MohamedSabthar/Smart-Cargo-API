@@ -3,9 +3,9 @@ const router = require("express").Router();
 const Joi = require("@hapi/joi");
 
 const userModel = require("../models/users");
-const depotModel=require("../models/depot");
 const vehicleTypeModel = require("../models/vehicle-type");
 const vehicleModel = require("../models/vehicle");
+const depotModel = require("../models/depot");
 
 const adminMiddleware = require("../middleware/admin-middleware");
 
@@ -499,6 +499,7 @@ function validateRepair(request) {
   });
   return schema.validate(request);
 }
+
 
 //register depot
 router.post("/register-depot", async (req, res) => {
