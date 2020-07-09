@@ -11,7 +11,7 @@ const adminMiddleware = require("../middleware/admin-middleware");
 
 
 //only admin can execute all the functions implemented here
- router.use(adminMiddleware);
+ //router.use(adminMiddleware);
 
 //driver-registration
 router.post("/register-driver", async (req, res) => {
@@ -557,21 +557,7 @@ router.post("/update-depot/:depotId", async (req, res) => {
     });
 });
 
-router.delete("/delete-depot/:depotId", (req, res) => {
-  const id = req.params.depotId;
-  depotModel
-    .findByIdAndDelete({ _id: id })
-    .then((result) => {
-      return res.status(201).json({
-        message: "depot deleted successfully",
-      });
-    })
-    .catch((err) => {
-      return res.status(500).json({
-        error: err,
-      });
-    });
-});
+
 
 
 
