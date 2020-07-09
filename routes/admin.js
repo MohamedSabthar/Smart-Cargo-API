@@ -63,7 +63,7 @@ router.post("/update-driver/:userId", async (req, res) => {
   if (error) return res.status(400).json({ error: error });
 
   userModel
-    .findByIdAndUpdate({ _id: id }, { $set: req.body })
+    .findByIdAndUpdate({ _id: id }, { $set: value })
     .then((result) => {
       //checking if given id does not exist in the database
       if (!result)
@@ -91,18 +91,16 @@ router.delete("/delete-driver/:userId", (req, res) => {
 });
 
 //update storekeeper
-router.post("/update-storekeeper/:userId", (req, res) => {
-  bcrypt.hash(req.body.password, 10, (err, hash) => {
-    if (err) {
-      return res.status(500).json({
-        error: err,
-      });
-    }
-    req.body.password = hash; //store the hashed password
-    const id = req.params.userId;
+router.post("/update-storekeeper/:userId", async (req, res) => {
+
+  const id = req.params.userId;
+  const { error, value } = await validateStoreKeeper(req.body,true,id);
+ 
+  //checking for bad(400) request error
+  if (error) return res.status(400).json({ error: error });
 
     userModel
-      .findByIdAndUpdate({ _id: id }, { $set: req.body })
+      .findByIdAndUpdate({ _id: id }, { $set: value})
       .then((result) => {
         return res.status(201).json({
           message: "storekeeper updated successfully",
@@ -113,7 +111,7 @@ router.post("/update-storekeeper/:userId", (req, res) => {
           error: err,
         });
       });
-  });
+  // });
 });
 
 //delete storekeeper
@@ -133,16 +131,8 @@ router.delete("/delete-storekeeper/:userId", (req, res) => {
     });
 });
 
-//driver-registration
+//storekeeper-registration
 router.post("/register-storekeeper", async (req, res) => {
-  bcrypt.hash(req.body.password, 10, (err, hash) => {
-    if (err) {
-      return res.status(500).json({
-        error: err,
-      });
-    }
-    req.body.password = hash; //store the hashed password
-  });
 
   req.body.role = "storekeeper"; //set the role to driver
   //validating driver registration
@@ -202,8 +192,6 @@ async function validateStoreKeeper(user, isUpdate = false, id = null) {
           city: Joi.string().required(),
         },
         role: Joi.string().required(),
-        password: Joi.string().required().min(8),
-
       });
 
       return schema.validate(user, { abortEarly: false });
