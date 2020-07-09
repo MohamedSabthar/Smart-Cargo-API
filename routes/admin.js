@@ -558,10 +558,20 @@ router.post("/update-depot/:depotId", async (req, res) => {
 });
 
 
+router.get("/depot",(req,res)=> {
 
+  depotModel.find()
+  .then(data => {
+    res.send(data);
+  })
+  .catch(err => {
+    res.status(500).send({
+      message:
+        err.message || " error in while retriving depot"
+    });
+  });
 
-
-
+});
 async function validateDepot(depot, isUpdate = false, id = null) {
   let query = depotModel.find();
 
