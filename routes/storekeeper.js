@@ -71,7 +71,8 @@ router.get("/vehicle-types/:id", (req, res) => {
     });
 });
 
-router.post(`${routingEngineLink}/make-cluster`, async (req, res) => {
+router.post('/make-cluster', async (req, res) => {
+  req.setTimeout(5*1000);
   //get the curruntly available vehicles from the database;
   const vehicles = await vehicleModel
     .find()
@@ -97,7 +98,7 @@ router.post(`${routingEngineLink}/make-cluster`, async (req, res) => {
 
   const enineParams = { vehicles , orders , depot };
 
-  axios.post('/make-cluster',enineParams )
+  axios.post(`${routingEngineLink}/make-cluster`,enineParams )
   .then( (response)=> {
     console.log('finished');
     return res.json(response.data);

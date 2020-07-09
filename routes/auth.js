@@ -6,33 +6,12 @@ const forgotPassword = require("../email/forgot-password");
 const { route } = require("./admin");
 const secretkey = process.env.SECRET || "secret";
 
-router.post("/sign-up", (req, res) => {
-  //need to add validations
-  bcrypt.hash(req.body.password, 10, (err, hash) => {
-    if (err) {
-      return res.status(500).json({
-        error: err,
-      });
-    }
-    req.body.password = hash; //store the hashed password
-    const user = new userModel(req.body);
-
-    user
-      .save()
-      .then((result) => {
-        return res.status(201).json({
-          message: "User Created",
-        });
-      })
-      .catch((err) => {
-        return res.status(500).json({
-          error: err,
-        });
-      });
-  });
-});
-
 router.post("/sign-in", (req, res) => {
+  if (!req.body.email || !req.body.password)
+    return res.status(401).json({
+      message: "You have entered invalid credentials",
+    });
+
   userModel
     .find()
     .where("contact.email")
@@ -85,11 +64,11 @@ router.post("/sign-in", (req, res) => {
 
 //this post method will send an forgot password email to the user
 router.post("/forgot-password", (req, res) => {
-
   //if no email provided in the request then send error
-  if(!req.body.email) return  res.status(400).json({
-    message: "Your email doesn't match with our record",
-  });
+  if (!req.body.email)
+    return res.status(400).json({
+      message: "Your email doesn't match with our record",
+    });
 
   userModel
     .findOne()
@@ -133,6 +112,13 @@ router.post("/forgot-password", (req, res) => {
 router.put("/reset-password/:token", (req, res) => {
   try {
     let tokenParams = req.params.token.split("_"); //contains user_id ,random and validity
+
+    if (tokenParams.length < 3)
+      return res.status(400).json({
+        error:
+          "Invalid password reset token: please request for password reset",
+      });
+
     //chekcing for the token match in the database
     userModel
       .findById(tokenParams[0])
@@ -142,17 +128,19 @@ router.put("/reset-password/:token", (req, res) => {
       .then((user) => {
         //if no users found then the token is invalid
         if (!user || user.reset_token != req.params.token)
-          return res
-            .status(400)
-            .json({ error: "Invalid password reset token: please request for password reset" });
+          return res.status(400).json({
+            error:
+              "Invalid password reset token: please request for password reset",
+          });
 
-            console.log(user);
+        console.log(user);
 
         // checking for the invalidity of the token
         if (tokenParams[2] < Date.now())
-          return res
-            .status(400)
-            .json({ error: "Request for pasword reset is expired: : please request for a new password reset" });
+          return res.status(400).json({
+            error:
+              "Request for pasword reset is expired: : please request for a new password reset",
+          });
 
         //need to add password validation here
 
@@ -173,12 +161,13 @@ router.put("/reset-password/:token", (req, res) => {
             return res
               .status(200)
               .json({ message: "Password rest successful" });
-
           });
         });
       });
   } catch {
-    return res.status(400).json({ error: "Invalid password reset token: please request for password reset" });
+    return res.status(400).json({
+      error: "Invalid password reset token: please request for password reset",
+    });
   }
 });
 
