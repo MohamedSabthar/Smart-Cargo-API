@@ -512,7 +512,7 @@ function validateRepair(request) {
   return schema.validate(request);
 }
 
-
+//register depot
 router.post("/register-depot", async (req, res) => {
   
 
@@ -537,6 +537,8 @@ router.post("/register-depot", async (req, res) => {
     });
 });
 
+//update depot request
+
 router.post("/update-depot/:depotId", async (req, res) => {
  
   const id = req.params.depotId;
@@ -557,7 +559,7 @@ router.post("/update-depot/:depotId", async (req, res) => {
     });
 });
 
-
+//get request for depot
 router.get("/depot",(req,res)=> {
 
   depotModel.find()
@@ -572,6 +574,7 @@ router.get("/depot",(req,res)=> {
   });
 
 });
+//validate function for depot registration and update
 async function validateDepot(depot, isUpdate = false, id = null) {
   let query = depotModel.find();
 
