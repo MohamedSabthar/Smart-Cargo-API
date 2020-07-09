@@ -15,14 +15,7 @@ const adminMiddleware = require("../middleware/admin-middleware");
 
 //driver-registration
 router.post("/register-driver", async (req, res) => {
-  // bcrypt.hash(req.body.password, 10, (err, hash) => {
-  //   if (err) {
-  //     return res.status(500).json({
-  //       error: err,
-  //     });
-  //   }
-  //   req.body.password = hash; //store the hashed password
-  // });
+
 
   req.body.role = "driver"; //set the role to driver
   //validating driver registration
@@ -48,15 +41,6 @@ router.post("/register-driver", async (req, res) => {
 
 //update driver
 router.post("/update-driver/:userId", async (req, res) => {
-  // bcrypt.hash(req.body.password, 10, (err, hash) => {
-  //   if (err) {
-  //     return res.status(500).json({
-  //       error: err,
-  //     });
-  //   }
-  //   req.body.password = hash; //store the hashed password
-  //   const id = req.params.userId;
-  // });
 
   const id = req.params.userId;
   const { error, value } = await validateDriver(req.body,true, id);
@@ -381,7 +365,7 @@ async function validateDriver(user, isUpdate = false, id = null) {
           city: Joi.string().required(),
         },
         role: Joi.string().required(),
-        //password: Joi.string().required().min(8),
+        
 
         //driver specific details
         license_no: Joi.string(),
