@@ -2,9 +2,11 @@ const router = require("express").Router();
 const vehicleModel = require("../models/vehicle");
 const vehicleTypesModel = require("../models/vehicle-type");
 const orderModel = require("../models/orders");
+const userModel = require("../models/users");
 const storekeeperMiddleware = require("../middleware/storekeeper-middleware");
 
 const axios = require('axios'); // used to make request to routing engine
+const { route } = require("./admin");
 const routingEngineLink = process.env.ROUTING_ENGINE || "http://localhost:8080"
 
 
@@ -109,6 +111,14 @@ router.post('/make-cluster', async (req, res) => {
 
   //console.log(vehicles);
   //res.json({ message:"we are processing your request"});
+});
+
+router.get('/drivers',(req,res)=>{
+  userModel.find().where('role').equals('driver').select("-password -__v").exec().then((drivers)=>{
+    return res.status(200).json({drivers:drivers});
+  }).catch((err)=>{
+    return res.status(500).json({error:err});
+  })
 });
 
 module.exports = router;

@@ -1,4 +1,5 @@
 const mongoose = require("../connection");
+const { bool, boolean } = require("@hapi/joi");
 
 const userSchema = new mongoose.Schema({
   //common user details (admin,driver & store-keeper)
@@ -22,6 +23,7 @@ const userSchema = new mongoose.Schema({
   //driver specific details
   license_no: { type: String },
   allowed_vehicle: { type: [mongoose.Schema.Types.ObjectId] }, // contians list of _id from vechicleTypeModel
+  user_is_available : { type:Boolean ,default:true },
 });
 
 module.exports = mongoose.model("users", userSchema);
