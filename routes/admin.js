@@ -15,14 +15,7 @@ const adminMiddleware = require("../middleware/admin-middleware");
 
 //driver-registration
 router.post("/register-driver", async (req, res) => {
-  bcrypt.hash(req.body.password, 10, (err, hash) => {
-    if (err) {
-      return res.status(500).json({
-        error: err,
-      });
-    }
-    req.body.password = hash; //store the hashed password
-  });
+
 
   req.body.role = "driver"; //set the role to driver
   //validating driver registration
@@ -48,17 +41,9 @@ router.post("/register-driver", async (req, res) => {
 
 //update driver
 router.post("/update-driver/:userId", async (req, res) => {
-  bcrypt.hash(req.body.password, 10, (err, hash) => {
-    if (err) {
-      return res.status(500).json({
-        error: err,
-      });
-    }
-    req.body.password = hash; //store the hashed password
-    const id = req.params.userId;
-  });
 
-  const { error, value } = await validateDriver(req.body);
+  const id = req.params.userId;
+  const { error, value } = await validateDriver(req.body,true, id);
 
   //checking for bad(400) request error
   if (error) return res.status(400).json({ error: error });
@@ -380,7 +365,7 @@ async function validateDriver(user, isUpdate = false, id = null) {
           city: Joi.string().required(),
         },
         role: Joi.string().required(),
-        password: Joi.string().required().min(8),
+        
 
         //driver specific details
         license_no: Joi.string(),
@@ -630,6 +615,105 @@ router.get("/track-vehicle",(req,res) =>{
 
 
 module.exports = router;
+
+
+//update driver
+router.put('/update-driver/:userId', adminMiddleware, (req, res) => {
+  //update driver validation
+  const { error, value } = validateDriver(req.body);
+
+  if (error) res.status(400).json({ error: error });
+  else {
+      bcrypt.hash(req.body.password, 10, (err, hash) => {
+          if (err) {
+              return res.status(500).json({
+                  error: err
+              });
+          }
+          req.body.password = hash; //store the hashed password
+          const id = req.params.userId;
+  
+          userModel
+              .findByIdAndUpdate({ _id: id }, { $set: req.body })
+              .then((result) => {
+                  return res.status(200).json({
+                      message: 'driver updated successfully'
+                  });
+              })
+              .catch((err) => {
+                  return res.status(500).json({
+                      error: err
+                  });
+              });
+      });
+  }
+});
+
+//delete driver
+router.delete('/delete-driver/:userId', adminMiddleware, (req, res) => {
+  const id = req.params.userId;
+  userModel
+      .findByIdAndDelete({ _id: id })
+      .then((result) => {
+          return res.status(200).json({
+              message: 'driver deleted successfully'
+          });
+      })
+      .catch((err) => {
+          return res.status(500).json({
+              error: err
+          });
+      });
+});
+
+//update Storekeeper
+router.post("/update-storekeeper/:userId", async (req, res) => {
+  bcrypt.hash(req.body.password, 10, (err, hash) => {
+    if (err) {
+      return res.status(500).json({
+        error: err,
+      });
+    }
+    req.body.password = hash; //store the hashed password
+    const id = req.params.userId;
+  });
+
+  const { error, value } = await validateStoreKeeper(req.body);
+
+  //checking for bad(400) request error
+  if (error) return res.status(400).json({ error: error });
+
+  userModel
+    .findByIdAndUpdate({ _id: id }, { $set: req.body })
+    .then((result) => {
+      //checking if given id does not exist in the database
+      if (!result)
+        return res.status(400).json({ error: "Store keeper not found" });
+      return res
+        .status(200)
+        .json({ message: "Store-keeper updated successfully" });
+    });
+});
+
+//delete Storekeeper
+router.delete("/delete-storekeeper/:userId", (req, res) => {
+  const id = req.params.userId;
+  userModel
+    .findByIdAndDelete({ _id: id })
+    .then((result) => {
+      //checking if given id does not exist in the database
+      if (!result)
+        return res.status(400).json({ error: "Storekeeper not found" });
+      return res.status(200).json({ message: "Storekeeper deleted successfully" });
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err });
+    });
+});
+
+
+
+
 
 //sample data for driver-registration
 
