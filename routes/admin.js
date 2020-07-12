@@ -10,7 +10,7 @@ const depotModel = require('../models/depot');
 const adminMiddleware = require('../middleware/admin-middleware');
 
 //only admin can execute all the functions implemented here
-router.use(adminMiddleware);
+//router.use(adminMiddleware);
 
 //driver-registration
 router.post('/register-driver', async (req, res) => {
@@ -35,6 +35,15 @@ router.post('/register-driver', async (req, res) => {
 			});
 		});
 });
+
+//get request for drivers
+router.get('/drivers',(req,res)=>{
+	userModel.find().where('role').equals('driver').select("-password -__v").exec().then((drivers)=>{
+	  return res.status(200).json({drivers:drivers});
+	}).catch((err)=>{
+	  return res.status(500).json({error:err});
+	})
+  });
 
 //update driver
 router.post('/update-driver/:userId', async (req, res) => {
