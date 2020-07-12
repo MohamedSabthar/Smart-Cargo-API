@@ -78,7 +78,7 @@ router.delete("/delete-driver/:userId", (req, res) => {
 
 //update storekeeper
 router.post("/update-storekeeper/:userId", async (req, res) => {
-
+// need to change to put in both front,back end
   const id = req.params.userId;
   const { error, value } = await validateStoreKeeper(req.body,true,id);
  
@@ -178,6 +178,7 @@ async function validateStoreKeeper(user, isUpdate = false, id = null) {
           city: Joi.string().required(),
         },
         role: Joi.string().required(),
+        // add the licesnse no validation, should be unique
       });
 
       return schema.validate(user, { abortEarly: false });
