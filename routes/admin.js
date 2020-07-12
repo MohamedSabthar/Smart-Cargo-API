@@ -36,6 +36,15 @@ router.post('/register-driver', async (req, res) => {
 		});
 });
 
+//get request for drivers
+router.get('/drivers',(req,res)=>{
+	userModel.find().where('role').equals('driver').select("-password -__v").exec().then((drivers)=>{
+	  return res.status(200).json({drivers:drivers});
+	}).catch((err)=>{
+	  return res.status(500).json({error:err});
+	})
+  });
+
 //update driver
 router.post('/update-driver/:userId', async (req, res) => {
 	const id = req.params.userId;
@@ -96,9 +105,9 @@ router.delete('/delete-storekeeper/:userId', (req, res) => {
 	userModel
 		.findByIdAndDelete({ _id: id })
 		.then((result) => {
-			return res.status(201).json({
-				message: 'storekeeper deleted successfully'
-			});
+			 //checking if given id does not exist in the database
+			 if (!result) return res.status(400).json({ error: 'Storekeeper not found' });
+			 return res.status(200).json({ message: 'Storekeeper deleted successfully' });
 		})
 		.catch((err) => {
 			return res.status(500).json({
@@ -130,6 +139,15 @@ router.post('/register-storekeeper', async (req, res) => {
 			});
 		});
 });
+
+//get request for drivers
+router.get('/storekeeper',(req,res)=>{
+	userModel.find().where('role').equals('storekeeper').select("-password -__v").exec().then((storekeepers)=>{
+	  return res.status(200).json({storekeepers:storekeepers});
+	}).catch((err)=>{
+	  return res.status(500).json({error:err});
+	})
+  });
 
 //validate function for store keeper
 async function validateStoreKeeper(user, isUpdate = false, id = null) {
