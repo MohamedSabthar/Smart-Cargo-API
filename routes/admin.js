@@ -140,6 +140,15 @@ router.post('/register-storekeeper', async (req, res) => {
 		});
 });
 
+//get request for drivers
+router.get('/storekeeper',(req,res)=>{
+	userModel.find().where('role').equals('storekeeper').select("-password -__v").exec().then((storekeepers)=>{
+	  return res.status(200).json({storekeepers:storekeepers});
+	}).catch((err)=>{
+	  return res.status(500).json({error:err});
+	})
+  });
+
 //validate function for store keeper
 async function validateStoreKeeper(user, isUpdate = false, id = null) {
   let query = userModel.find({
