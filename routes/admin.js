@@ -105,9 +105,9 @@ router.delete('/delete-storekeeper/:userId', (req, res) => {
 	userModel
 		.findByIdAndDelete({ _id: id })
 		.then((result) => {
-			return res.status(201).json({
-				message: 'storekeeper deleted successfully'
-			});
+			 //checking if given id does not exist in the database
+			 if (!result) return res.status(400).json({ error: 'Storekeeper not found' });
+			 return res.status(200).json({ message: 'Storekeeper deleted successfully' });
 		})
 		.catch((err) => {
 			return res.status(500).json({
