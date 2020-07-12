@@ -10,7 +10,7 @@ const depotModel = require('../models/depot');
 const adminMiddleware = require('../middleware/admin-middleware');
 
 //only admin can execute all the functions implemented here
-//router.use(adminMiddleware);
+router.use(adminMiddleware);
 
 //driver-registration
 router.post('/register-driver', async (req, res) => {
