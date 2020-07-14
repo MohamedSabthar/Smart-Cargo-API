@@ -9,14 +9,11 @@ const depotModel = require("../models/depot");
 
 const adminMiddleware = require("../middleware/admin-middleware");
 
-
 //only admin can execute all the functions implemented here
- router.use(adminMiddleware);
+router.use(adminMiddleware);
 
 //driver-registration
 router.post("/register-driver", async (req, res) => {
-
-
   req.body.role = "driver"; //set the role to driver
   //validating driver registration
   const { error, value } = await validateDriver(req.body);
@@ -27,9 +24,10 @@ router.post("/register-driver", async (req, res) => {
 
   user
     .save()
-    .then((result) => {
+    .then((driver) => {
       return res.status(201).json({
         message: "driver registered successfully",
+        driver: driver,
       });
     })
     .catch((err) => {
@@ -41,23 +39,17 @@ router.post("/register-driver", async (req, res) => {
 
 //update driver
 router.post("/update-driver/:userId", async (req, res) => {
-
   const id = req.params.userId;
-  const { error, value } = await validateDriver(req.body,true, id);
+  const { error, value } = await validateDriver(req.body, true, id);
 
   //checking for bad(400) request error
   if (error) return res.status(400).json({ error: error });
 
-  userModel
-    .findByIdAndUpdate({ _id: id }, { $set: value })
-    .then((result) => {
-      //checking if given id does not exist in the database
-      if (!result)
-        return res.status(400).json({ error: "Driver not found" });
-      return res
-        .status(200)
-        .json({ message: "Driver updated successfully" });
-    });
+  userModel.findByIdAndUpdate({ _id: id }, { $set: value }).then((result) => {
+    //checking if given id does not exist in the database
+    if (!result) return res.status(400).json({ error: "Driver not found" });
+    return res.status(200).json({ message: "Driver updated successfully" });
+  });
 });
 
 //delete driver
@@ -67,8 +59,7 @@ router.delete("/delete-driver/:userId", (req, res) => {
     .findByIdAndDelete({ _id: id })
     .then((result) => {
       //checking if given id does not exist in the database
-      if (!result)
-        return res.status(400).json({ error: "Driver not found" });
+      if (!result) return res.status(400).json({ error: "Driver not found" });
       return res.status(200).json({ message: "Driver deleted successfully" });
     })
     .catch((err) => {
@@ -78,25 +69,24 @@ router.delete("/delete-driver/:userId", (req, res) => {
 
 //update storekeeper
 router.post("/update-storekeeper/:userId", async (req, res) => {
-
   const id = req.params.userId;
-  const { error, value } = await validateStoreKeeper(req.body,true,id);
- 
+  const { error, value } = await validateStoreKeeper(req.body, true, id);
+
   //checking for bad(400) request error
   if (error) return res.status(400).json({ error: error });
 
-    userModel
-      .findByIdAndUpdate({ _id: id }, { $set: value})
-      .then((result) => {
-        return res.status(201).json({
-          message: "storekeeper updated successfully",
-        });
-      })
-      .catch((err) => {
-        return res.status(500).json({
-          error: err,
-        });
+  userModel
+    .findByIdAndUpdate({ _id: id }, { $set: value })
+    .then((result) => {
+      return res.status(201).json({
+        message: "storekeeper updated successfully",
       });
+    })
+    .catch((err) => {
+      return res.status(500).json({
+        error: err,
+      });
+    });
   // });
 });
 
@@ -119,7 +109,6 @@ router.delete("/delete-storekeeper/:userId", (req, res) => {
 
 //storekeeper-registration
 router.post("/register-storekeeper", async (req, res) => {
-
   req.body.role = "storekeeper"; //set the role to driver
   //validating driver registration
   const { error, value } = await validateStoreKeeper(req.body);
@@ -365,7 +354,6 @@ async function validateDriver(user, isUpdate = false, id = null) {
           city: Joi.string().required(),
         },
         role: Joi.string().required(),
-        
 
         //driver specific details
         license_no: Joi.string(),
@@ -485,12 +473,8 @@ function validateRepair(request) {
   return schema.validate(request);
 }
 
-
 //register depot
 router.post("/register-depot", async (req, res) => {
-  
-
-
   const { error, value } = await validateDepot(req.body);
 
   //checking for bad(400) request error
@@ -514,10 +498,9 @@ router.post("/register-depot", async (req, res) => {
 //update depot request
 
 router.post("/update-depot/:depotId", async (req, res) => {
- 
   const id = req.params.depotId;
   const { error, value } = await validateDepot(req.body);
-  
+
   //checking for bad(400) request error
   if (error) return res.status(400).json({ error: error });
 
@@ -525,28 +508,23 @@ router.post("/update-depot/:depotId", async (req, res) => {
     .findByIdAndUpdate({ _id: id }, { $set: req.body })
     .then((result) => {
       //checking if given id does not exist in the database
-      if (!result)
-        return res.status(400).json({ error: "Depot not found" });
-      return res
-        .status(200)
-        .json({ message: "Depot updated successfully" });
+      if (!result) return res.status(400).json({ error: "Depot not found" });
+      return res.status(200).json({ message: "Depot updated successfully" });
     });
 });
 
 //get request for depot
-router.get("/depot",(req,res)=> {
-
-  depotModel.find()
-  .then(data => {
-    res.send(data);
-  })
-  .catch(err => {
-    res.status(500).send({
-      message:
-        err.message || " error in while retriving depot"
+router.get("/depot", (req, res) => {
+  depotModel
+    .find()
+    .then((data) => {
+      res.send(data);
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: err.message || " error in while retriving depot",
+      });
     });
-  });
-
 });
 //validate function for depot registration and update
 async function validateDepot(depot, isUpdate = false, id = null) {
@@ -563,9 +541,11 @@ async function validateDepot(depot, isUpdate = false, id = null) {
       }
 
       const schema = Joi.object().keys({
-        location: { lat: Joi.number().required(), lang: Joi.number().required()},
-        address: Joi.string().required()
-
+        location: {
+          lat: Joi.number().required(),
+          lang: Joi.number().required(),
+        },
+        address: Joi.string().required(),
       });
 
       return schema.validate(depot, { abortEarly: false });
@@ -576,94 +556,113 @@ async function validateDepot(depot, isUpdate = false, id = null) {
   return validation;
 }
 
-
-
 //track vehicle post
 router.post("/track-vehicle/:id", (req, res) => {
-  trackVehicle={
-    id:"1234",
-    driverId:"34",
-    schedule:[{orderId:"o13",lat:"7.98",lang:"8.07",status:"deliverd"},
-    {orderId:"o17",lat:"7.00",lang:"8.00",status:"pending"},
-    {orderId:"o45",lat:"8.98",lang:"9.07",status:"pending"}
-  ]
-}
-    res.body=trackVehicle;
+  trackVehicle = {
+    id: "1234",
+    driverId: "34",
+    schedule: [
+      { orderId: "o13", lat: "7.98", lang: "8.07", status: "deliverd" },
+      { orderId: "o17", lat: "7.00", lang: "8.00", status: "pending" },
+      { orderId: "o45", lat: "8.98", lang: "9.07", status: "pending" },
+    ],
+  };
+  res.body = trackVehicle;
 
   return res.status(201).json(res.body);
-     
 });
 
 //track vehicle get
-router.get("/track-vehicle",(req,res) =>{
- data =[{licenseId:"1101",veicleNo:"1234",driverName:"sugan",DriverPhoneNo:"0717897654",vechileType:"lorry",orderDispatchTime:new Date()},
- {licenseId:"1101",veicleNo:"1234",driverName:"sugan",DriverPhoneNo:"0717897654",vechileType:"lorry",orderDispatchTime:new Date()},
- {licenseId:"1101",veicleNo:"1234",driverName:"sugan",DriverPhoneNo:"0717897654",vechileType:"lorry",orderDispatchTime:new Date()},
- {licenseId:"1101",veicleNo:"1234",driverName:"sugan",DriverPhoneNo:"0717897654",vechileType:"lorry",orderDispatchTime:new Date()}
- ]    
+router.get("/track-vehicle", (req, res) => {
+  data = [
+    {
+      licenseId: "1101",
+      veicleNo: "1234",
+      driverName: "sugan",
+      DriverPhoneNo: "0717897654",
+      vechileType: "lorry",
+      orderDispatchTime: new Date(),
+    },
+    {
+      licenseId: "1101",
+      veicleNo: "1234",
+      driverName: "sugan",
+      DriverPhoneNo: "0717897654",
+      vechileType: "lorry",
+      orderDispatchTime: new Date(),
+    },
+    {
+      licenseId: "1101",
+      veicleNo: "1234",
+      driverName: "sugan",
+      DriverPhoneNo: "0717897654",
+      vechileType: "lorry",
+      orderDispatchTime: new Date(),
+    },
+    {
+      licenseId: "1101",
+      veicleNo: "1234",
+      driverName: "sugan",
+      DriverPhoneNo: "0717897654",
+      vechileType: "lorry",
+      orderDispatchTime: new Date(),
+    },
+  ];
 
-    res.body=data;
+  res.body = data;
 
   return res.status(201).json(res.body);
-     
 });
-
-
-
-
-
-
 
 module.exports = router;
 
-
 //update driver
-router.put('/update-driver/:userId', adminMiddleware, (req, res) => {
+router.put("/update-driver/:userId", adminMiddleware, (req, res) => {
   //update driver validation
   const { error, value } = validateDriver(req.body);
 
   if (error) res.status(400).json({ error: error });
   else {
-      bcrypt.hash(req.body.password, 10, (err, hash) => {
-          if (err) {
-              return res.status(500).json({
-                  error: err
-              });
-          }
-          req.body.password = hash; //store the hashed password
-          const id = req.params.userId;
-  
-          userModel
-              .findByIdAndUpdate({ _id: id }, { $set: req.body })
-              .then((result) => {
-                  return res.status(200).json({
-                      message: 'driver updated successfully'
-                  });
-              })
-              .catch((err) => {
-                  return res.status(500).json({
-                      error: err
-                  });
-              });
-      });
+    bcrypt.hash(req.body.password, 10, (err, hash) => {
+      if (err) {
+        return res.status(500).json({
+          error: err,
+        });
+      }
+      req.body.password = hash; //store the hashed password
+      const id = req.params.userId;
+
+      userModel
+        .findByIdAndUpdate({ _id: id }, { $set: req.body })
+        .then((result) => {
+          return res.status(200).json({
+            message: "driver updated successfully",
+          });
+        })
+        .catch((err) => {
+          return res.status(500).json({
+            error: err,
+          });
+        });
+    });
   }
 });
 
 //delete driver
-router.delete('/delete-driver/:userId', adminMiddleware, (req, res) => {
+router.delete("/delete-driver/:userId", adminMiddleware, (req, res) => {
   const id = req.params.userId;
   userModel
-      .findByIdAndDelete({ _id: id })
-      .then((result) => {
-          return res.status(200).json({
-              message: 'driver deleted successfully'
-          });
-      })
-      .catch((err) => {
-          return res.status(500).json({
-              error: err
-          });
+    .findByIdAndDelete({ _id: id })
+    .then((result) => {
+      return res.status(200).json({
+        message: "driver deleted successfully",
       });
+    })
+    .catch((err) => {
+      return res.status(500).json({
+        error: err,
+      });
+    });
 });
 
 //update Storekeeper
@@ -704,16 +703,14 @@ router.delete("/delete-storekeeper/:userId", (req, res) => {
       //checking if given id does not exist in the database
       if (!result)
         return res.status(400).json({ error: "Storekeeper not found" });
-      return res.status(200).json({ message: "Storekeeper deleted successfully" });
+      return res
+        .status(200)
+        .json({ message: "Storekeeper deleted successfully" });
     })
     .catch((err) => {
       return res.status(500).json({ error: err });
     });
 });
-
-
-
-
 
 //sample data for driver-registration
 
