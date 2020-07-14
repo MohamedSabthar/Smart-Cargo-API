@@ -33,12 +33,14 @@ app.use("/admin", adminRoute);
 const storekeeperRoute = require("./routes/storekeeper");
 app.use('/storekeeper', storekeeperRoute);
 
+const registrationMail = require("./email/registration-mail");
+
 //root end-point
-app.get("/", (req, res) => {
-  res.status(200).json({
-    mgs: "test",
-  });
-});
+// app.get("/", (req, res) => {
+//   res = {name:{first:'sab',last:'thar'},contact:{email:'sabtharugc0@gmail.com'},role:'sss'}
+//   registrationMail(res,'123');
+//   res.body('mail test')
+// });
 
 io.on("connection", (socket) => {
   let count = 0;
