@@ -2,12 +2,11 @@ const mongoose = require("../connection");
 
 const scheduleSchema = new mongoose.Schema({
   orders: [
-    {
-      orderID: { type: mongoose.Schema.Types.ObjectId ,ref: 'orders' },
-    },
+  { type: mongoose.Schema.Types.ObjectId ,ref: 'orders' },
+    
   ],
-  driverID: {type: mongoose.Schema.Types.ObjectId ,ref: 'users'},
-  vehicleID: { type: mongoose.Schema.Types.ObjectId ,ref: 'vehicle' },
+  driver: {type: mongoose.Schema.Types.ObjectId ,ref: 'users'},
+  vehicle: { type: mongoose.Schema.Types.ObjectId ,ref: 'vehicles' },
   
 });
 

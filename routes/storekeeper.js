@@ -100,6 +100,7 @@ router.post('/make-cluster', async (req, res) => {
 
   const enineParams = { vehicles , orders , depot };
 
+  //calling spring boot routing engine
   axios.post(`${routingEngineLink}/make-cluster`,enineParams )
   .then( (response)=> {
     console.log('finished');
