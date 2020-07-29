@@ -7,7 +7,10 @@ const vehicleTypeModel = require("../models/vehicle-type");
 const vehicleModel = require("../models/vehicle");
 const depotModel = require("../models/depot");
 
+const scheduleModel = require("../models/schedule");
+
 const adminMiddleware = require("../middleware/admin-middleware");
+const schedule = require("../models/schedule");
 
 //only admin can execute all the functions implemented here
 router.use(adminMiddleware);
@@ -194,7 +197,7 @@ async function validateStoreKeeper(user, isUpdate = false, id = null) {
         contact: {
           email: Joi.string().email().required().lowercase(),
           phone: Joi.string().pattern(
-            /^(?:0|94|\+94)?(?:(11|21|23|24|25|26|27|31|32|33|34|35|36|37|38|41|45|47|51|52|54|55|57|63|65|66|67|81|912)(0|2|3|4|5|7|9)|7(0|1|2|5|6|7|8)\d)\d{6}$/
+            /^(?:0|94|\+94)?(?:(11|21|23|24|25|26|27|31|32|33|34|35|36|37|38|41|45|47|51|52|54|55|57|63|65|66|67|81|912)(0|2|3|4|5|7|9)|7(0|1|2|5|6|7|8)\d)\d{6}$/,
           ),
         },
         address: {
@@ -242,7 +245,7 @@ router.put("/update-vehicle-type/:id", async (req, res) => {
   const { error, value } = await validateVehicleType(
     req.body,
     true,
-    req.params.id
+    req.params.id,
   );
 
   if (error) return res.status(400).json({ error: error });
@@ -382,7 +385,7 @@ async function validateDriver(user, isUpdate = false, id = null) {
         contact: {
           email: Joi.string().email().required().lowercase(),
           phone: Joi.string().pattern(
-            /^(?:0|94|\+94)?(?:(11|21|23|24|25|26|27|31|32|33|34|35|36|37|38|41|45|47|51|52|54|55|57|63|65|66|67|81|912)(0|2|3|4|5|7|9)|7(0|1|2|5|6|7|8)\d)\d{6}$/
+            /^(?:0|94|\+94)?(?:(11|21|23|24|25|26|27|31|32|33|34|35|36|37|38|41|45|47|51|52|54|55|57|63|65|66|67|81|912)(0|2|3|4|5|7|9)|7(0|1|2|5|6|7|8)\d)\d{6}$/,
           ),
         },
         address: {
@@ -425,7 +428,7 @@ async function validateVehicleType(vehicleType, isUpdate = false, id = null) {
       const schema = Joi.object().keys({
         type: Joi.string()
           .pattern(
-            /^[A-Za-z0-9 ]*[A-Za-z0-9][A-Za-z0-9 ]*$/ //allow only letter, numbers & spaces
+            /^[A-Za-z0-9 ]*[A-Za-z0-9][A-Za-z0-9 ]*$/, //allow only letter, numbers & spaces
           )
           .lowercase()
           .trim()
@@ -487,14 +490,14 @@ async function validateVehicle(vehicle, isUpdate = false, id = null) {
         license_plate: Joi.string()
           .trim()
           .pattern(
-            /^[A-Za-z]{2,3}[0-9]{4}$/ //regex for licence plate no
+            /^[A-Za-z]{2,3}[0-9]{4}$/, //regex for licence plate no
           )
           .uppercase()
           .required(),
-		  on_repair: Joi.bool(),
-		  fuel_economy: Joi.number().min(1).required(),
-		  load: Joi.number().min(1).required(),
-		  capacity: Joi.number().min(1).required(),
+        on_repair: Joi.bool(),
+        fuel_economy: Joi.number().min(1).required(),
+        load: Joi.number().min(1).required(),
+        capacity: Joi.number().min(1).required(),
       });
 
       return schema.validate(vehicle, { abortEarly: false });
@@ -655,7 +658,7 @@ router.get("/track-vehicle", (req, res) => {
 });
 
 //get storekeeper list
-router.get("/storekeepers", (reg, res) => {
+router.get("/storekeepers", (req, res) => {
   userModel
     .find()
     .where("role")
@@ -666,6 +669,28 @@ router.get("/storekeepers", (reg, res) => {
     })
     .catch((err) => {
       return res.status(500).json({ error: err });
+    });
+});
+
+//get driver's assinged-shcedule
+router.get("/driver-shecedules/:id", (req, res) => {
+  const id = req.params.id;
+  scheduleModel
+    .find()
+    .where("driver")
+    .equals(id)
+    .populate({
+      path: "orders",
+    })
+    .populate({
+      path: "vehicle",
+    })
+    .exec()
+    .then((schedule) => {
+      return res.status(200).json({ schedule: schedule });
+    })
+    .catch((err) => {
+      return res.status(400).json({ error: err });
     });
 });
 
