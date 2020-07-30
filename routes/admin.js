@@ -673,7 +673,7 @@ router.get("/storekeepers", (req, res) => {
 });
 
 //get driver's assinged-shcedule
-router.get("/driver-shecedules/:id", (req, res) => {
+router.get("/driver-schedules/:id", (req, res) => {
   const id = req.params.id;
   scheduleModel
     .find()
@@ -684,10 +684,13 @@ router.get("/driver-shecedules/:id", (req, res) => {
     })
     .populate({
       path: "vehicle",
-    })
+      populate: {
+        path: 'vehicle_type',
+      },
+    }).sort({date: 'desc'})
     .exec()
-    .then((schedule) => {
-      return res.status(200).json({ schedule: schedule });
+    .then((schedules) => {
+      return res.status(200).json({ schedules: schedules });
     })
     .catch((err) => {
       return res.status(400).json({ error: err });

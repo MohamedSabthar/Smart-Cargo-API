@@ -106,15 +106,20 @@ router.post("/make-cluster", async (req, res) => {
   axios
     .post(`${routingEngineLink}/make-cluster`, enineParams)
     .then(async (response) => {
-      //save the resulting cluster
-      const schedule = await scheduleModel.create(response.data);
+      let schedule = response.data;
+      schedule.forEach((doc) => {
+        doc.date = new Date(Date.now());
+      });
+      console.log(schedule);
 
-      return res.json({ schedule: schedule });
+      //save the resulting cluster
+      const result = await scheduleModel.create(schedule);
+
+      return res.json({ schedule: result });
     })
     .catch((error) => {
       console.log(error);
     });
-
 });
 
 router.get("/drivers", (req, res) => {
@@ -131,5 +136,9 @@ router.get("/drivers", (req, res) => {
       return res.status(500).json({ error: err });
     });
 });
+
+router.put("/assign-driver-to-cluster",(req,res)=>{
+  console.log(req.body);
+})
 
 module.exports = router;
