@@ -697,6 +697,31 @@ router.get("/driver-schedules/:id", (req, res) => {
     });
 });
 
+//get storekeeper's assinged-shcedule
+router.get("/storekeeper-schedules/:id", (req, res) => {
+  const id = req.params.id;
+  scheduleModel
+    .find()
+    .where("storekeeper")
+    .equals(id)
+    .populate({
+      path: "orders",
+    })
+    .populate({
+      path: "vehicle",
+      populate: {
+        path: 'vehicle_type',
+      },
+    }).sort({date: 'desc'})
+    .exec()
+    .then((schedules) => {
+      return res.status(200).json({ schedules: schedules });
+    })
+    .catch((err) => {
+      return res.status(400).json({ error: err });
+    });
+});
+
 module.exports = router;
 
 //sample data for driver-registration
