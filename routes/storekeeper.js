@@ -3,12 +3,13 @@ const vehicleModel = require("../models/vehicle");
 const vehicleTypesModel = require("../models/vehicle-type");
 const orderModel = require("../models/orders");
 const userModel = require("../models/users");
+const scheduleModel = require("../models/schedule");
+
 const storekeeperMiddleware = require("../middleware/storekeeper-middleware");
 
-const axios = require('axios'); // used to make request to routing engine
+const axios = require("axios"); // used to make request to routing engine
 const { route } = require("./admin");
-const routingEngineLink = process.env.ROUTING_ENGINE || "http://localhost:8080"
-
+const routingEngineLink = process.env.ROUTING_ENGINE || "http://localhost:8080";
 
 //only admin and storekeeper can execute all the functions implemented here
 router.use(storekeeperMiddleware);
@@ -73,8 +74,8 @@ router.get("/vehicle-types/:id", (req, res) => {
     });
 });
 
-router.post('/make-cluster', async (req, res) => {
-  req.setTimeout(5*1000);
+router.post("/make-cluster", async (req, res) => {
+  req.setTimeout(5 * 1000);
   //get the curruntly available vehicles from the database;
   const vehicles = await vehicleModel
     .find()
@@ -93,32 +94,51 @@ router.post('/make-cluster', async (req, res) => {
     .find()
     .where("status")
     .equals("ready")
-    .where("emergency_level").lte(1)
+    .where("emergency_level")
+    .lte(1)
     .select("_id location volume load");
 
-  const depot = {lat:1.2345,lang:2.903};
+  const depot = { lat: 1.2345, lang: 2.903 };
 
-  const enineParams = { vehicles , orders , depot };
+  const enineParams = { vehicles, orders, depot };
 
-  axios.post(`${routingEngineLink}/make-cluster`,enineParams )
-  .then( (response)=> {
-    console.log('finished');
-    return res.json(response.data);
-  })
-  .catch((error)=> {
-    console.log(error);
-  });
+  //calling spring boot routing engine to break the clusters
+  axios
+    .post(`${routingEngineLink}/make-cluster`, enineParams)
+    .then(async (response) => {
+      let schedule = response.data;
+      schedule.forEach((doc) => {
+        doc.date = new Date(Date.now());
+      });
+      console.log(schedule);
 
-  //console.log(vehicles);
-  //res.json({ message:"we are processing your request"});
+      //save the resulting cluster
+      const result = await scheduleModel.create(schedule);
+
+      return res.json({ schedule: result });
+    })
+    .catch((error) => {
+      console.log(error);
+    });
 });
 
-router.get('/drivers',(req,res)=>{
-  userModel.find().where('role').equals('driver').select("-password -__v").exec().then((drivers)=>{
-    return res.status(200).json({drivers:drivers});
-  }).catch((err)=>{
-    return res.status(500).json({error:err});
-  })
+router.get("/drivers", (req, res) => {
+  userModel
+    .find()
+    .where("role")
+    .equals("driver")
+    .select("-password -__v")
+    .exec()
+    .then((drivers) => {
+      return res.status(200).json({ drivers: drivers });
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err });
+    });
 });
+
+router.put("/assign-driver-to-cluster",(req,res)=>{
+  console.log(req.body);
+})
 
 module.exports = router;
