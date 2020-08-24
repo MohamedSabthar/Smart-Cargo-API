@@ -13,9 +13,9 @@ router.post("/", (req, res) => {
       .save()
       .then((doc) => {
         if (!doc || doc.length === 0) {
-          return res.status(500).send(doc);
+          return res.status(500).json({ error: "failed to the store order" });
         }
-        res.status(201).send(doc);
+        res.status(201).json({ data: "order stored successfully" });
       })
 
       .catch((err) => {
@@ -24,9 +24,23 @@ router.post("/", (req, res) => {
   }
 });
 
+router.post("/bulk", (req, res) => {
+  //validating customer order request
+  const { error, value } = validateOrder(req.body, true);
+  //checking for bad(400) request error
+  if (error) res.status(400).json({ error: error });
+  else {
+    orderModel.insertMany(value, (err, orders) => {
+      if (!orders || orders.length === 0)
+        return res.status(500).json({ error: err });
+      return res.status(201).json({ data: "orders stored successfully" });
+    });
+  }
+});
+
 //validation for customer order
-function validateOrder(order) {
-  const schema = Joi.object().keys({
+function validateOrder(order, bulk = false) {
+  let schema = Joi.object().keys({
     location: {
       lat: Joi.number().required(),
       lang: Joi.number().required(),
@@ -43,6 +57,7 @@ function validateOrder(order) {
     ),
   });
 
+  if (bulk) schema = Joi.array().items(schema);
   return schema.validate(order);
 }
 
