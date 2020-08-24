@@ -10,6 +10,7 @@ const storekeeperMiddleware = require("../middleware/storekeeper-middleware");
 
 const axios = require("axios"); // used to make request to routing engine
 const { route } = require("./admin");
+const Joi = require("@hapi/joi");
 const routingEngineLink = process.env.ROUTING_ENGINE || "http://localhost:8080";
 
 //only admin and storekeeper can execute all the functions implemented here
@@ -154,13 +155,13 @@ router.get("/orders/:status",(req,res)=>{
   })
 });
 
-router.put("/orders/:id", async (req, res) => {
+router.put("/orders", async (req, res) => {
   //validating the update request data
   const { error, value } = validateOrder(req.body, true);
   //checking for bad(400) request error
-  if (error) res.status(400).json({ error: error });
+  if (error || req.body.id == null) res.status(400).json({ error: error });
   else {
-    orderModel.findByIdAndUpdate(req.params.id, value, { new: false })
+    orderModel.findByIdAndUpdate(req.body.id, {load:value.load, volume:value.volume})
     .exec()
     .then((order) => {
       //checking if given id does not exist in the database
@@ -179,24 +180,10 @@ router.put("/orders/:id", async (req, res) => {
 
 
 function validateOrder(order, bulk = false) {
-  let schema = Joi.object().keys({
-    location: {
-      lat: Joi.number().required(),
-      lang: Joi.number().required(),
-    },
-    products: Joi.array().items({
-      item: Joi.string().required(),
-      quantity: Joi.number().integer().min(1).required(),
-    }),
-    email: Joi.string().email().required(),
-    phone: Joi.string().pattern(
-      new RegExp(
-        /^(?:0|94|\+94)?(?:(11|21|23|24|25|26|27|31|32|33|34|35|36|37|38|41|45|47|51|52|54|55|57|63|65|66|67|81|912)(0|2|3|4|5|7|9)|7(0|1|2|5|6|7|8)\d)\d{6}$/,
-      ),
-    ),
+  const schema = Joi.object().keys({
+   volume:  Joi.number().required() , 
+   load: Joi.number().required()
   });
-
-  if (bulk) schema = Joi.array().items(schema);
   return schema.validate(order);
 }
 
