@@ -4,6 +4,7 @@ const vehicleTypesModel = require("../models/vehicle-type");
 const orderModel = require("../models/orders");
 const userModel = require("../models/users");
 const scheduleModel = require("../models/schedule");
+const orders = require("../models/orders");
 
 const storekeeperMiddleware = require("../middleware/storekeeper-middleware");
 
@@ -143,5 +144,14 @@ router.get("/drivers", (req, res) => {
 router.put("/assign-driver-to-cluster",(req,res)=>{
   console.log(req.body);
 })
+
+//get list of orders route param(status) should be ready/pending/delivered/shcheduled
+router.get("/orders/:status",(req,res)=>{
+  orders.find().where("status").equals(req.params.status).exec().then((orders)=>{
+    return res.status(200).json({orders:orders});
+  }).catch((err)=>{
+    return res.status(500).json({error:err});
+  })
+});
 
 module.exports = router;
