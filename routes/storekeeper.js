@@ -75,6 +75,9 @@ router.get("/vehicle-types/:id", (req, res) => {
 });
 
 router.post("/make-cluster", async (req, res) => {
+
+  // get the request(emergancy level) form client
+  const emergancyLvl = 1; 
   req.setTimeout(5 * 1000);
   //get the curruntly available vehicles from the database;
   const vehicles = await vehicleModel
@@ -95,7 +98,7 @@ router.post("/make-cluster", async (req, res) => {
     .where("status")
     .equals("ready")
     .where("emergency_level")
-    .lte(1)
+    .lte(emergancyLvl)
     .select("_id location volume load");
 
   const depot = { lat: 1.2345, lang: 2.903 };
