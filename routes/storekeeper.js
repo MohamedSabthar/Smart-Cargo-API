@@ -4,7 +4,6 @@ const vehicleTypesModel = require("../models/vehicle-type");
 const orderModel = require("../models/orders");
 const userModel = require("../models/users");
 const scheduleModel = require("../models/schedule");
-const orders = require("../models/orders");
 
 const storekeeperMiddleware = require("../middleware/storekeeper-middleware");
 
@@ -76,9 +75,8 @@ router.get("/vehicle-types/:id", (req, res) => {
 });
 
 router.post("/make-cluster", async (req, res) => {
-
   // get the request(emergancy level) form client
-  const emergancyLvl = 1; 
+  const emergancyLvl = 1;
   req.setTimeout(5 * 1000);
   //get the curruntly available vehicles from the database;
   const vehicles = await vehicleModel
@@ -141,17 +139,43 @@ router.get("/drivers", (req, res) => {
     });
 });
 
-router.put("/assign-driver-to-cluster",(req,res)=>{
+router.put("/assign-driver-to-cluster", (req, res) => {
   console.log(req.body);
-})
+});
 
 //get list of orders route param(status) should be ready/pending/delivered/shcheduled
-router.get("/orders/:status",(req,res)=>{
-  orders.find().where("status").equals(req.params.status).exec().then((orders)=>{
-    return res.status(200).json({orders:orders});
-  }).catch((err)=>{
-    return res.status(500).json({error:err});
-  })
+router.get("/orders/:status", (req, res) => {
+  orderModel
+    .find()
+    .where("status")
+    .equals(req.params.status)
+    .exec()
+    .then((orders) => {
+      return res.status(200).json({ orders: orders });
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err });
+    });
+});
+
+router.put("/add-order-dimension/:id", (req, res) => {
+  console.log(req.params.id);
+  console.log(req.body);
+  orderModel
+    .findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: req.body,
+      },
+      { new: true }
+    )
+    .exec()
+    .then((result) => {
+      return res.status(200).json({ msg: result });
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err });
+    });
 });
 
 module.exports = router;
