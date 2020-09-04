@@ -8,3 +8,4 @@ const vehicleTypeModel = mongoose.Schema({
 });
 
 module.exports = mongoose.model("vehicle_types", vehicleTypeModel);
+//testing
