@@ -10,6 +10,7 @@ const storekeeperMiddleware = require("../middleware/storekeeper-middleware");
 const axios = require("axios"); // used to make request to routing engine
 const { route } = require("./admin");
 const Joi = require("@hapi/joi");
+const orders = require("../models/orders");
 const routingEngineLink = process.env.ROUTING_ENGINE || "http://localhost:8080";
 
 //only admin and storekeeper can execute all the functions implemented here
@@ -159,6 +160,22 @@ router.get("/orders/:status", (req, res) => {
     });
 });
 
+//get the list of orders which's dimensions are not added
+router.get("/new-orders", (req, res) => {
+  orderModel
+    .find()
+    .where("volume")
+    .equals(null)
+    .exec()
+    .then((orders) => {
+      return res.status(200).json({ orders: orders });
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err });
+    });
+});
+
+//method to update the orders with their dimensions
 router.put("/add-order-dimension/:id", (req, res) => {
   console.log(req.params.id);
   console.log(req.body);
@@ -185,28 +202,24 @@ router.put("/orders", async (req, res) => {
   //checking for bad(400) request error
   if (error || req.body.id == null) res.status(400).json({ error: error });
   else {
-    orderModel.findByIdAndUpdate(req.body.id, {load:value.load, volume:value.volume})
-    .exec()
-    .then((order) => {
-      //checking if given id does not exist in the database
-      if (!order)
-        return res.status(400).json({ error: "order not found" });
-      return res
-        .status(200)
-        .json({ message: "order updated successfully" });
-    });
+    orderModel
+      .findByIdAndUpdate(req.body.id, {
+        load: value.load,
+        volume: value.volume,
+      })
+      .exec()
+      .then((order) => {
+        //checking if given id does not exist in the database
+        if (!order) return res.status(400).json({ error: "order not found" });
+        return res.status(200).json({ message: "order updated successfully" });
+      });
   }
-
-  
-
- 
 });
-
 
 function validateOrder(order, bulk = false) {
   const schema = Joi.object().keys({
-   volume:  Joi.number().required() , 
-   load: Joi.number().required()
+    volume: Joi.number().required(),
+    load: Joi.number().required(),
   });
   return schema.validate(order);
 }
