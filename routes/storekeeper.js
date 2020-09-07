@@ -76,9 +76,9 @@ router.get("/vehicle-types/:id", (req, res) => {
 });
 
 router.post("/make-cluster", async (req, res) => {
-
   // get the request(emergancy level) form client
-  const emergancyLvl = 1; 
+  const emergancyLvl = req.body.emergancyLevels;
+  console.log(emergancyLvl);
   req.setTimeout(5 * 1000);
   //get the curruntly available vehicles from the database;
   const vehicles = await vehicleModel
@@ -93,36 +93,49 @@ router.post("/make-cluster", async (req, res) => {
     })
     .select("_id");
 
+    console.log(vehicles)
+
   // get all the orders which are ready to deliver
   const orders = await orderModel
     .find()
     .where("status")
     .equals("ready")
     .where("emergency_level")
-    .lte(emergancyLvl)
+    .in(emergancyLvl)
     .select("_id location volume load");
+
+    if(orders.length<1) return res.json({schedule:[]});
+
+  console.log(orders);
 
   const depot = { lat: 1.2345, lang: 2.903 };
 
   const enineParams = { vehicles, orders, depot };
 
   //calling spring boot routing engine to break the clusters
+  const clusteredOrders = [];
   axios
     .post(`${routingEngineLink}/make-cluster`, enineParams)
     .then(async (response) => {
       let schedule = response.data;
       schedule.forEach((doc) => {
         doc.date = new Date(Date.now());
+        clusteredOrders.push(...doc.orders)
       });
-      console.log(schedule);
+      console.log(clusteredOrders);
 
       //save the resulting cluster
       const result = await scheduleModel.create(schedule);
 
+      await orderModel.updateMany(
+        { _id: { $in: clusteredOrders} },
+        { $set: { status: "clustered" } },
+      );
+
       return res.json({ schedule: result });
     })
     .catch((error) => {
-      console.log(error);
+      // console.log(error);
     });
 });
 
@@ -141,17 +154,23 @@ router.get("/drivers", (req, res) => {
     });
 });
 
-router.put("/assign-driver-to-cluster",(req,res)=>{
+router.put("/assign-driver-to-cluster", (req, res) => {
   console.log(req.body);
-})
+});
 
 //get list of orders route param(status) should be ready/pending/delivered/shcheduled
-router.get("/orders/:status",(req,res)=>{
-  orders.find().where("status").equals(req.params.status).exec().then((orders)=>{
-    return res.status(200).json({orders:orders});
-  }).catch((err)=>{
-    return res.status(500).json({error:err});
-  })
+router.get("/orders/:status", (req, res) => {
+  orders
+    .find()
+    .where("status")
+    .equals(req.params.status)
+    .exec()
+    .then((orders) => {
+      return res.status(200).json({ orders: orders });
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err });
+    });
 });
 
 router.put("/orders/:id", async (req, res) => {
@@ -160,23 +179,16 @@ router.put("/orders/:id", async (req, res) => {
   //checking for bad(400) request error
   if (error) res.status(400).json({ error: error });
   else {
-    orderModel.findByIdAndUpdate(req.params.id, value, { new: false })
-    .exec()
-    .then((order) => {
-      //checking if given id does not exist in the database
-      if (!order)
-        return res.status(400).json({ error: "order not found" });
-      return res
-        .status(200)
-        .json({ message: "order updated successfully" });
-    });
+    orderModel
+      .findByIdAndUpdate(req.params.id, value, { new: false })
+      .exec()
+      .then((order) => {
+        //checking if given id does not exist in the database
+        if (!order) return res.status(400).json({ error: "order not found" });
+        return res.status(200).json({ message: "order updated successfully" });
+      });
   }
-
-  
-
- 
 });
-
 
 function validateOrder(order, bulk = false) {
   let schema = Joi.object().keys({
