@@ -181,8 +181,8 @@ async function validateStoreKeeper(user, isUpdate = false, id = null) {
 
   const validation = await query
     .exec()
-    .then((drivers) => {
-      if (drivers.length >= 1) {
+    .then((storekeepers) => {
+      if (storekeepers.length >= 1) {
         return { error: "Store-keeper is already registered", value: {} };
       }
 

@@ -5,12 +5,15 @@ const orderModel = require("../models/orders");
 const userModel = require("../models/users");
 const scheduleModel = require("../models/schedule");
 const orders = require("../models/orders");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const storekeeperMiddleware = require("../middleware/storekeeper-middleware");
 
 const axios = require("axios"); // used to make request to routing engine
 const { route } = require("./admin");
 const Joi = require("@hapi/joi");
+const users = require("../models/users");
 const routingEngineLink = process.env.ROUTING_ENGINE || "http://localhost:8080";
 
 //only admin and storekeeper can execute all the functions implemented here
@@ -178,6 +181,141 @@ router.put("/orders", async (req, res) => {
  
 });
 
+//get user details in setting page 
+router.get("/settings/:userId", async (req,res) => {
+  const id = req.params.userId;
+
+  userModel.findById({ _id: id }).then((result) => {
+    console.log(result);
+    return res.status(201).json({
+      result
+    });
+  })  
+  .catch((err) => {
+    return res.status(500).json({
+      error: err,
+    });
+  });
+});
+
+//update user profile details
+router.put("/settings/:userId", async (req,res) => {
+  const id = req.params.userId;
+  const { error, value } = await validateUserProfile(req.body, true, id);
+
+  //checking for bad(400) request error 
+  if (error) return res.status(400).json({ error: error });
+
+  userModel.findByIdAndUpdate({ _id: id }, { $set: value }).then((result) => {
+    //checking if given id does not exist in the database
+    if (!result) return res.status(400).json({ error: "UserProfile not found" });
+    return res.status(200).json({ message: "User Profile updated successfully" });
+  });
+});
+
+//validating user profile update 
+async function validateUserProfile(user, isUpdate = false, id = null) {
+  let query = userModel.find({
+    "contact.email": user.contact.email.toLowerCase(),
+  });
+
+  //extend the query if the request is update
+  if (isUpdate) query.where("_id").ne(id);
+
+  const validation = await query
+    .exec()
+    .then((user) => {
+      if (user.length >= 1) {
+        return { error: "User Profile is already registered", value: {} };
+      }
+
+      const schema = Joi.object().keys({
+        name: {
+          first: Joi.string()
+            .pattern(/^[A-Za-z]+$/)
+            .required(),
+          middle: Joi.string().required(),
+          last: Joi.string().required(),
+        },
+        contact: {
+          email: Joi.string().email().required().lowercase(),
+          phone: Joi.string().pattern(
+            /^(?:0|94|\+94)?(?:(11|21|23|24|25|26|27|31|32|33|34|35|36|37|38|41|45|47|51|52|54|55|57|63|65|66|67|81|912)(0|2|3|4|5|7|9)|7(0|1|2|5|6|7|8)\d)\d{6}$/,
+          ),
+        },
+        address: {
+          no: Joi.string().required(),
+          street: Joi.string().required(),
+          city: Joi.string().required(),
+        },
+      });
+
+      return schema.validate(user, { abortEarly: false });
+    })
+    .catch((err) => {
+      return { error: err, value: {} };
+    });
+  return validation;
+}
+
+//change password in user profile
+router.put("/profile-password/:userId", async (req,res) => {
+  const id = req.params.userId;
+
+  if(!req.body.old_password || !req.body.new_password)
+    return res.status(401).json({
+      message: "You have entered invalid credentials",
+    });
+
+    userModel.findById({ _id: id}).then((user) => {
+      // if no user found for given email throw error 
+      if (user.length < 1) {
+        return res.status(401).json({
+          message: "You have entered invalid credentials",
+        });
+      }
+      //else compare the hased old password
+      bcrypt.compare(req.body.old_password, user[0].password, (err, isMatched) => {
+        if (isMatched) {
+          //else compare the hased new password
+          bcrypt.compare(req.body.new_password, user[0].password, (err, isMatched) => {
+            if (isMatched) {
+              return res.status(401).json({
+                message: "Your old password and new password are same",
+              });
+            }
+            //return error if password doesn't match or on server error
+            if (err) {
+              return res.status(500).json({
+                error: err,
+              });
+            }
+            //if password not same then change password
+            if (!isMatched) {
+              user[0].password = req.body.new_password ;
+              return res.status(200).json({
+                message: "You have successfully changed password",
+              });
+            }
+          });
+        }
+        //return error if password doesn't match or on server error
+        if (err) {
+          return res.status(500).json({
+            error: err,
+          });
+        }
+        return res.status(401).json({
+          message: "Invalid password",
+        });
+      });
+    })
+    .catch((err) => {
+      return res.status(500).json({
+        error: err,
+      });
+    });
+});
 
 function validateOrder(order, bulk = false) {
   const schema = Joi.object().keys({
