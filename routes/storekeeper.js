@@ -78,7 +78,8 @@ router.get("/vehicle-types/:id", (req, res) => {
 
 router.post("/make-cluster", async (req, res) => {
   // get the request(emergancy level) form client
-  const emergancyLvl = 1;
+  const emergancyLvl = req.body.emergancyLevels;
+  console.log(emergancyLvl);
   req.setTimeout(5 * 1000);
   //get the curruntly available vehicles from the database;
   const vehicles = await vehicleModel
@@ -93,36 +94,49 @@ router.post("/make-cluster", async (req, res) => {
     })
     .select("_id");
 
+  console.log(vehicles);
+
   // get all the orders which are ready to deliver
   const orders = await orderModel
     .find()
     .where("status")
     .equals("ready")
     .where("emergency_level")
-    .lte(emergancyLvl)
+    .in(emergancyLvl)
     .select("_id location volume load");
+
+  if (orders.length < 1) return res.json({ schedule: [] });
+
+  console.log(orders);
 
   const depot = { lat: 1.2345, lang: 2.903 };
 
   const enineParams = { vehicles, orders, depot };
 
   //calling spring boot routing engine to break the clusters
+  const clusteredOrders = [];
   axios
     .post(`${routingEngineLink}/make-cluster`, enineParams)
     .then(async (response) => {
       let schedule = response.data;
       schedule.forEach((doc) => {
         doc.date = new Date(Date.now());
+        clusteredOrders.push(...doc.orders);
       });
-      console.log(schedule);
+      console.log(clusteredOrders);
 
       //save the resulting cluster
       const result = await scheduleModel.create(schedule);
 
+      await orderModel.updateMany(
+        { _id: { $in: clusteredOrders } },
+        { $set: { status: "clustered" } },
+      );
+
       return res.json({ schedule: result });
     })
     .catch((error) => {
-      console.log(error);
+      // console.log(error);
     });
 });
 
@@ -197,6 +211,8 @@ router.put("/add-order-dimension/:id", (req, res) => {
 });
 
 router.put("/orders", async (req, res) => {
+// add order dimention of given order
+router.put("/add-order-dimension", async (req, res) => {
   //validating the update request data
   const { error, value } = validateOrder(req.body, true);
   //checking for bad(400) request error
@@ -223,5 +239,52 @@ function validateOrder(order, bulk = false) {
   });
   return schema.validate(order);
 }
+
+//generate the route for the given cluster
+router.post("/generate-route", async (req, res) => {
+  if (req.body.id == null) return res.status(400).json({ error: error });
+  const cluster = await scheduleModel
+    .findById(req.body.id)
+    .populate({
+      path: "orders",
+      select: "_id location",
+    })
+    .select("-_id"); //last .select("-_id") statement removes the id of the cluster
+    
+  if (cluster.route.length > 0)
+    return res.status(200).json({ res: "route already generated" });
+
+  let clusterOrders = cluster.orders;
+
+  const depot = { _id: "hardcoded", location: { lat: 1.234, lang: 4.566 } };
+
+  const enineParams = { orders: [depot, ...clusterOrders] }; //need to send the depot as the first object to the routing engine
+
+  console.log(enineParams);
+
+  //call the routing engine to generate route
+  axios
+    .post(`${routingEngineLink}/generate-route`, enineParams)
+    .then(async (response) => {
+      console.log(response.data);
+      //update the generated route to database
+      const route = await scheduleModel.findByIdAndUpdate(
+        req.body.id,
+        {
+          $set: { route: response.data },
+        },
+        { new: true },
+      );
+
+      //update the status of routed orders as sheduled
+      await orderModel.updateMany(
+        { _id: { $in: response.data } },
+        { $set: { status: "sheduled" } },
+      );
+
+      return res.json({ route: route });
+    })
+    .catch((error) => console.log(error));
+});
 
 module.exports = router;
