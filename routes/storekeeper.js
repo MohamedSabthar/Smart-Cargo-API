@@ -136,7 +136,7 @@ router.post("/make-cluster", async (req, res) => {
       return res.json({ schedule: result });
     })
     .catch((error) => {
-      // console.log(error);
+      console.log(error);
     });
 });
 
@@ -212,10 +212,14 @@ router.post("/generate-route", async (req, res) => {
       path: "orders",
       select: "_id location",
     })
+    .populate({
+      path: "route",
+      select: "_id location",
+    })
     .select("-_id"); //last .select("-_id") statement removes the id of the cluster
-    
-  if (cluster.route.length > 0)
-    return res.status(200).json({ res: "route already generated" });
+
+  if (cluster.route != null && cluster.route.length > 0)
+    return res.status(200).json({ route: cluster });
 
   let clusterOrders = cluster.orders;
 
@@ -231,7 +235,7 @@ router.post("/generate-route", async (req, res) => {
     .then(async (response) => {
       console.log(response.data);
       //update the generated route to database
-      const route = await scheduleModel.findByIdAndUpdate(
+      await scheduleModel.findByIdAndUpdate(
         req.body.id,
         {
           $set: { route: response.data },
@@ -239,13 +243,26 @@ router.post("/generate-route", async (req, res) => {
         { new: true },
       );
 
+      //return the route with populated orders
+      const route = await scheduleModel
+        .findById(req.body.id)
+        .populate({
+          path: "orders",
+          select: "_id location",
+        })
+        .populate({
+          path: "route",
+          select: "_id location",
+        })
+        .select("-_id"); //last .select("-_id") statement removes the id of the cluster
+
       //update the status of routed orders as sheduled
       await orderModel.updateMany(
         { _id: { $in: response.data } },
         { $set: { status: "sheduled" } },
       );
 
-      return res.json({ route: route });
+      return res.status(200).json({ route: route });
     })
     .catch((error) => console.log(error));
 });
