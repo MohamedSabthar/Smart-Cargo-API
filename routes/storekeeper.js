@@ -156,7 +156,36 @@ router.get("/drivers", (req, res) => {
 });
 
 router.put("/assign-driver-to-cluster", (req, res) => {
-  console.log(req.body);
+  userModel
+    .findById(req.body.driver)
+    .exec()
+    .then((driverDoc) => {
+      console.log(driverDoc);
+      if (!driverDoc || driverDoc.role != "driver")
+        return res.status(400).json({ error: "Invalid driver_id provided" });
+    })
+    .catch((err) => {
+      return res.status(400).json({ error: "Invalid driver_id provided" });
+    });
+
+  scheduleModel
+    .findByIdAndUpdate(
+      req.body._id,
+      { $set: { driver: req.body.driver } },
+      { new: true },
+    )
+    .exec()
+    .then((cluster) => {
+      //checking if given id does not exist in the database
+      if (!cluster)
+        return res.status(400).json({ error: "Invalid cluster_id provided" });
+      return res
+        .status(200)
+        .json({ message: "driver assigned successfully", cluster: cluster });
+    })
+    .catch((err) => {
+      return res.status(400).json({ error: "Invalid cluster_id provided" });
+    });
 });
 
 //get list of orders route param(status) should be ready/pending/delivered/shcheduled
@@ -265,6 +294,14 @@ router.post("/generate-route", async (req, res) => {
       return res.status(200).json({ route: route });
     })
     .catch((error) => console.log(error));
+});
+
+// list all the orders which are of status "ready" and return high,medium and low urgency orders seperately as json
+router.get("/orders",async (req,res)=>{
+  const high = await orderModel.find().where("status").equals("ready").where("emergency_level").equals(1).select("_id location");
+  const medium = await orderModel.find().where("status").equals("ready").where("emergency_level").equals(2).select("_id location");
+  const low = await orderModel.find().where("status").equals("ready").where("emergency_level").equals(3).select("_id location");
+  return res.status(200).json({high,medium,low});
 });
 
 module.exports = router;

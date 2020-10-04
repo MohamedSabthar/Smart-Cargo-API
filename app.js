@@ -61,7 +61,7 @@ server.listen(port, () => {
 
 // run scheduler every day to increase priority
 //cron will check every 12 hours (is priority updated?)
-cron.schedule("* * * * *", () => {
+cron.schedule("* * 23 * *", () => {
   console.log("cronjob running");
   let currentDate = new Date(
     new Date().getFullYear(),
