@@ -136,7 +136,7 @@ router.post("/make-cluster", async (req, res) => {
       return res.json({ schedule: result });
     })
     .catch((error) => {
-      // console.log(error);
+      console.log(error);
     });
 });
 
@@ -156,7 +156,36 @@ router.get("/drivers", (req, res) => {
 });
 
 router.put("/assign-driver-to-cluster", (req, res) => {
-  console.log(req.body);
+  userModel
+    .findById(req.body.driver)
+    .exec()
+    .then((driverDoc) => {
+      console.log(driverDoc);
+      if (!driverDoc || driverDoc.role != "driver")
+        return res.status(400).json({ error: "Invalid driver_id provided" });
+    })
+    .catch((err) => {
+      return res.status(400).json({ error: "Invalid driver_id provided" });
+    });
+
+  scheduleModel
+    .findByIdAndUpdate(
+      req.body._id,
+      { $set: { driver: req.body.driver } },
+      { new: true }
+    )
+    .exec()
+    .then((cluster) => {
+      //checking if given id does not exist in the database
+      if (!cluster)
+        return res.status(400).json({ error: "Invalid cluster_id provided" });
+      return res
+        .status(200)
+        .json({ message: "driver assigned successfully", cluster: cluster });
+    })
+    .catch((err) => {
+      return res.status(400).json({ error: "Invalid cluster_id provided" });
+    });
 });
 
 //get list of orders route param(status) should be ready/pending/delivered/shcheduled
@@ -247,10 +276,14 @@ router.post("/generate-route", async (req, res) => {
       path: "orders",
       select: "_id location",
     })
+    .populate({
+      path: "route",
+      select: "_id location",
+    })
     .select("-_id"); //last .select("-_id") statement removes the id of the cluster
 
-  if (cluster.route.length > 0)
-    return res.status(200).json({ res: "route already generated" });
+  if (cluster.route != null && cluster.route.length > 0)
+    return res.status(200).json({ route: cluster });
 
   let clusterOrders = cluster.orders;
 
@@ -266,7 +299,7 @@ router.post("/generate-route", async (req, res) => {
     .then(async (response) => {
       console.log(response.data);
       //update the generated route to database
-      const route = await scheduleModel.findByIdAndUpdate(
+      await scheduleModel.findByIdAndUpdate(
         req.body.id,
         {
           $set: { route: response.data },
@@ -274,13 +307,26 @@ router.post("/generate-route", async (req, res) => {
         { new: true }
       );
 
+      //return the route with populated orders
+      const route = await scheduleModel
+        .findById(req.body.id)
+        .populate({
+          path: "orders",
+          select: "_id location",
+        })
+        .populate({
+          path: "route",
+          select: "_id location",
+        })
+        .select("-_id"); //last .select("-_id") statement removes the id of the cluster
+
       //update the status of routed orders as sheduled
       await orderModel.updateMany(
         { _id: { $in: response.data } },
         { $set: { status: "sheduled" } }
       );
 
-      return res.json({ route: route });
+      return res.status(200).json({ route: route });
     })
     .catch((error) => console.log(error));
 });
@@ -305,6 +351,32 @@ router.get("/scheduled-orders", (req, res) => {
     .catch((err) => {
       return res.status(400).json({ error: err });
     });
+});
+
+// list all the orders which are of status "ready" and return high,medium and low urgency orders seperately as json
+router.get("/orders", async (req, res) => {
+  const high = await orderModel
+    .find()
+    .where("status")
+    .equals("ready")
+    .where("emergency_level")
+    .equals(1)
+    .select("_id location");
+  const medium = await orderModel
+    .find()
+    .where("status")
+    .equals("ready")
+    .where("emergency_level")
+    .equals(2)
+    .select("_id location");
+  const low = await orderModel
+    .find()
+    .where("status")
+    .equals("ready")
+    .where("emergency_level")
+    .equals(3)
+    .select("_id location");
+  return res.status(200).json({ high, medium, low });
 });
 
 module.exports = router;
