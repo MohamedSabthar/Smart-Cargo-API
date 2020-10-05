@@ -130,7 +130,7 @@ router.post("/make-cluster", async (req, res) => {
 
       await orderModel.updateMany(
         { _id: { $in: clusteredOrders } },
-        { $set: { status: "clustered" } },
+        { $set: { status: "clustered" } }
       );
 
       return res.json({ schedule: result });
@@ -172,7 +172,7 @@ router.put("/assign-driver-to-cluster", (req, res) => {
     .findByIdAndUpdate(
       req.body._id,
       { $set: { driver: req.body.driver } },
-      { new: true },
+      { new: true }
     )
     .exec()
     .then((cluster) => {
@@ -203,7 +203,42 @@ router.get("/orders/:status", (req, res) => {
     });
 });
 
-// add order dimention of given order
+//get the list of orders which's dimensions are not added
+router.get("/new-orders", (req, res) => {
+  orderModel
+    .find()
+    .where("volume")
+    .equals(null)
+    .exec()
+    .then((orders) => {
+      return res.status(200).json({ orders: orders });
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err });
+    });
+});
+
+//method to update the orders with their dimensions
+router.put("/add-order-dimension/:id", (req, res) => {
+  console.log(req.params.id);
+  console.log(req.body);
+  orderModel
+    .findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: req.body,
+      },
+      { new: true }
+    )
+    .exec()
+    .then((result) => {
+      return res.status(200).json({ msg: result });
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err });
+    });
+});
+
 router.put("/add-order-dimension", async (req, res) => {
   //validating the update request data
   const { error, value } = validateOrder(req.body, true);
@@ -269,7 +304,7 @@ router.post("/generate-route", async (req, res) => {
         {
           $set: { route: response.data },
         },
-        { new: true },
+        { new: true }
       );
 
       //return the route with populated orders
@@ -288,7 +323,7 @@ router.post("/generate-route", async (req, res) => {
       //update the status of routed orders as sheduled
       await orderModel.updateMany(
         { _id: { $in: response.data } },
-        { $set: { status: "sheduled" } },
+        { $set: { status: "sheduled" } }
       );
 
       return res.status(200).json({ route: route });
@@ -296,12 +331,52 @@ router.post("/generate-route", async (req, res) => {
     .catch((error) => console.log(error));
 });
 
+router.get("/scheduled-orders", (req, res) => {
+  scheduleModel
+    .find()
+    .populate({
+      path: "orders",
+    })
+    .populate({
+      path: "vehicle",
+      populate: {
+        path: "vehicle_type",
+      },
+    })
+    .sort({ date: "desc" })
+    .exec()
+    .then((schedules) => {
+      return res.status(200).json({ schedules: schedules });
+    })
+    .catch((err) => {
+      return res.status(400).json({ error: err });
+    });
+});
+
 // list all the orders which are of status "ready" and return high,medium and low urgency orders seperately as json
-router.get("/orders",async (req,res)=>{
-  const high = await orderModel.find().where("status").equals("ready").where("emergency_level").equals(1).select("_id location");
-  const medium = await orderModel.find().where("status").equals("ready").where("emergency_level").equals(2).select("_id location");
-  const low = await orderModel.find().where("status").equals("ready").where("emergency_level").equals(3).select("_id location");
-  return res.status(200).json({high,medium,low});
+router.get("/orders", async (req, res) => {
+  const high = await orderModel
+    .find()
+    .where("status")
+    .equals("ready")
+    .where("emergency_level")
+    .equals(1)
+    .select("_id location");
+  const medium = await orderModel
+    .find()
+    .where("status")
+    .equals("ready")
+    .where("emergency_level")
+    .equals(2)
+    .select("_id location");
+  const low = await orderModel
+    .find()
+    .where("status")
+    .equals("ready")
+    .where("emergency_level")
+    .equals(3)
+    .select("_id location");
+  return res.status(200).json({ high, medium, low });
 });
 
 module.exports = router;
