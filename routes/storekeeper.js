@@ -130,7 +130,7 @@ router.post("/make-cluster", async (req, res) => {
 
       await orderModel.updateMany(
         { _id: { $in: clusteredOrders } },
-        { $set: { status: "clustered" } },
+        { $set: { status: "clustered" } }
       );
 
       return res.json({ schedule: result });
@@ -210,8 +210,6 @@ router.put("/add-order-dimension/:id", (req, res) => {
     });
 });
 
-router.put("/orders", async (req, res) => {
-// add order dimention of given order
 router.put("/add-order-dimension", async (req, res) => {
   //validating the update request data
   const { error, value } = validateOrder(req.body, true);
@@ -250,7 +248,7 @@ router.post("/generate-route", async (req, res) => {
       select: "_id location",
     })
     .select("-_id"); //last .select("-_id") statement removes the id of the cluster
-    
+
   if (cluster.route.length > 0)
     return res.status(200).json({ res: "route already generated" });
 
@@ -273,18 +271,40 @@ router.post("/generate-route", async (req, res) => {
         {
           $set: { route: response.data },
         },
-        { new: true },
+        { new: true }
       );
 
       //update the status of routed orders as sheduled
       await orderModel.updateMany(
         { _id: { $in: response.data } },
-        { $set: { status: "sheduled" } },
+        { $set: { status: "sheduled" } }
       );
 
       return res.json({ route: route });
     })
     .catch((error) => console.log(error));
+});
+
+router.get("/scheduled-orders", (req, res) => {
+  scheduleModel
+    .find()
+    .populate({
+      path: "orders",
+    })
+    .populate({
+      path: "vehicle",
+      populate: {
+        path: "vehicle_type",
+      },
+    })
+    .sort({ date: "desc" })
+    .exec()
+    .then((schedules) => {
+      return res.status(200).json({ schedules: schedules });
+    })
+    .catch((err) => {
+      return res.status(400).json({ error: err });
+    });
 });
 
 module.exports = router;
