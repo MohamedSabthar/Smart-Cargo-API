@@ -342,6 +342,8 @@ router.get("/scheduled-orders", (req, res) => {
       populate: {
         path: "vehicle_type",
       },
+    }).populate({
+      path: "route"
     })
     .sort({ date: "desc" })
     .exec()
