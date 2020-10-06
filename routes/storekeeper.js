@@ -206,8 +206,8 @@ router.get("/orders/:status", (req, res) => {
 router.get("/new-orders", (req, res) => {
   orderModel
     .find()
-    .where("volume")
-    .equals(null)
+    .where("status")
+    .equals("pending")
     .exec()
     .then((orders) => {
       return res.status(200).json({ orders: orders });
