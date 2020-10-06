@@ -8,9 +8,8 @@ const scheduleModel = require("../models/schedule");
 const storekeeperMiddleware = require("../middleware/storekeeper-middleware");
 
 const axios = require("axios"); // used to make request to routing engine
-const { route } = require("./admin");
 const Joi = require("@hapi/joi");
-const orders = require("../models/orders");
+const depotModel = require("../models/depot");
 const routingEngineLink = process.env.ROUTING_ENGINE || "http://localhost:8080";
 
 //only admin and storekeeper can execute all the functions implemented here
@@ -342,6 +341,8 @@ router.get("/scheduled-orders", (req, res) => {
       populate: {
         path: "vehicle_type",
       },
+    }).populate({
+      path: "route"
     })
     .sort({ date: "desc" })
     .exec()
@@ -377,6 +378,12 @@ router.get("/orders", async (req, res) => {
     .equals(3)
     .select("_id location");
   return res.status(200).json({ high, medium, low });
+});
+
+router.get("/depot",(req,res)=>{
+  depotModel.findOne().exec().then((depot)=>{
+    return res.status(200).json({depot:depot});
+  })
 });
 
 module.exports = router;

@@ -11,6 +11,7 @@ const scheduleModel = require("../models/schedule");
 
 const adminMiddleware = require("../middleware/admin-middleware");
 const schedule = require("../models/schedule");
+const registratinMail = require("../email/registration-mail");
 
 //only admin can execute all the functions implemented here
 router.use(adminMiddleware);
@@ -28,6 +29,15 @@ router.post("/register-driver", async (req, res) => {
   user
     .save()
     .then((driver) => {
+      //generating a random token and saving it to the database
+      let token = generateToken(driver._id);
+
+      user.set({ reset_token: token });
+      user.save((err, user) => {
+        //sent the mail to the user
+        registratinMail(user, token);
+      });
+
       return res.status(201).json({
         message: "driver registered successfully",
         driver: driver,
@@ -685,9 +695,10 @@ router.get("/driver-schedules/:id", (req, res) => {
     .populate({
       path: "vehicle",
       populate: {
-        path: 'vehicle_type',
+        path: "vehicle_type",
       },
-    }).sort({date: 'desc'})
+    })
+    .sort({ date: "desc" })
     .exec()
     .then((schedules) => {
       return res.status(200).json({ schedules: schedules });
@@ -710,9 +721,10 @@ router.get("/storekeeper-schedules/:id", (req, res) => {
     .populate({
       path: "vehicle",
       populate: {
-        path: 'vehicle_type',
+        path: "vehicle_type",
       },
-    }).sort({date: 'desc'})
+    })
+    .sort({ date: "desc" })
     .exec()
     .then((schedules) => {
       return res.status(200).json({ schedules: schedules });
@@ -721,6 +733,11 @@ router.get("/storekeeper-schedules/:id", (req, res) => {
       return res.status(400).json({ error: err });
     });
 });
+
+function generateToken(id) {
+  let validity = Date.now() + 5 * 60000; //adding 5 min from now
+  return `${id}_${Math.random().toString(20).substr(2)}_${validity}`;
+}
 
 module.exports = router;
 
