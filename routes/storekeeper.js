@@ -206,8 +206,6 @@ router.get("/orders/:status", (req, res) => {
 router.get("/new-orders", (req, res) => {
   orderModel
     .find()
-    .where("volume")
-    .equals(null)
     .exec()
     .then((orders) => {
       return res.status(200).json({ orders: orders });
@@ -218,26 +216,6 @@ router.get("/new-orders", (req, res) => {
 });
 
 //method to update the orders with their dimensions
-router.put("/add-order-dimension/:id", (req, res) => {
-  console.log(req.params.id);
-  console.log(req.body);
-  orderModel
-    .findByIdAndUpdate(
-      req.params.id,
-      {
-        $set: req.body,
-      },
-      { new: true }
-    )
-    .exec()
-    .then((result) => {
-      return res.status(200).json({ msg: result });
-    })
-    .catch((err) => {
-      return res.status(500).json({ error: err });
-    });
-});
-
 router.put("/add-order-dimension", async (req, res) => {
   //validating the update request data
   const { error, value } = validateOrder(req.body, true);
@@ -248,6 +226,7 @@ router.put("/add-order-dimension", async (req, res) => {
       .findByIdAndUpdate(req.body.id, {
         load: value.load,
         volume: value.volume,
+        status: "ready",
       })
       .exec()
       .then((order) => {
@@ -262,6 +241,7 @@ function validateOrder(order, bulk = false) {
   const schema = Joi.object().keys({
     volume: Joi.number().required(),
     load: Joi.number().required(),
+    id: Joi.string().required(),
   });
   return schema.validate(order);
 }
@@ -341,8 +321,9 @@ router.get("/scheduled-orders", (req, res) => {
       populate: {
         path: "vehicle_type",
       },
-    }).populate({
-      path: "route"
+    })
+    .populate({
+      path: "route",
     })
     .sort({ date: "desc" })
     .exec()
@@ -380,10 +361,13 @@ router.get("/orders", async (req, res) => {
   return res.status(200).json({ high, medium, low });
 });
 
-router.get("/depot",(req,res)=>{
-  depotModel.findOne().exec().then((depot)=>{
-    return res.status(200).json({depot:depot});
-  })
+router.get("/depot", (req, res) => {
+  depotModel
+    .findOne()
+    .exec()
+    .then((depot) => {
+      return res.status(200).json({ depot: depot });
+    });
 });
 
 module.exports = router;
