@@ -142,7 +142,7 @@ router.delete("/delete-storekeeper/:userId", (req, res) => {
 
 //storekeeper-registration
 router.post("/register-storekeeper", async (req, res) => {
-  req.body.role = "storekeeper"; //set the role to driver
+  req.body.role = "store-keeper"; //set the role to driver
   //validating driver registration
   const { error, value } = await validateStoreKeeper(req.body);
 
@@ -169,7 +169,7 @@ router.get("/storekeeper", (req, res) => {
   userModel
     .find()
     .where("role")
-    .equals("storekeeper")
+    .equals("store-keeper")
     .select("-password -__v")
     .exec()
     .then((storekeepers) => {
@@ -672,7 +672,7 @@ router.get("/storekeepers", (req, res) => {
   userModel
     .find()
     .where("role")
-    .equals("storekeeper")
+    .equals("store-keeper")
     .exec()
     .then((storekeepers) => {
       return res.status(200).json({ storekeepers: storekeepers });
