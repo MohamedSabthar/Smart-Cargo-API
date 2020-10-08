@@ -78,6 +78,9 @@ router.get("/vehicle-types/:id", (req, res) => {
 router.post("/make-cluster", async (req, res) => {
   // get the request(emergancy level) form client
   const emergancyLvl = req.body.emergancyLevels;
+//validating the input
+  if (emergancyLvl == null || emergancyLvl == [])
+    return res.status(400).json({ error: "emergancyLevels can't be empty" });
   console.log(emergancyLvl);
   req.setTimeout(5 * 1000);
   //get the curruntly available vehicles from the database;
@@ -120,6 +123,7 @@ router.post("/make-cluster", async (req, res) => {
       let schedule = response.data;
       schedule.forEach((doc) => {
         doc.date = new Date(Date.now());
+        doc.storekeeper = req.middleware._id;//accessing the user object from middleware and assing it to schedule object
         clusteredOrders.push(...doc.orders);
       });
       console.log(clusteredOrders);
@@ -129,7 +133,7 @@ router.post("/make-cluster", async (req, res) => {
 
       await orderModel.updateMany(
         { _id: { $in: clusteredOrders } },
-        { $set: { status: "clustered" } }
+        { $set: { status: "clustered" } },
       );
 
       return res.json({ schedule: result });
@@ -171,7 +175,7 @@ router.put("/assign-driver-to-cluster", (req, res) => {
     .findByIdAndUpdate(
       req.body._id,
       { $set: { driver: req.body.driver } },
-      { new: true }
+      { new: true },
     )
     .exec()
     .then((cluster) => {
@@ -283,7 +287,7 @@ router.post("/generate-route", async (req, res) => {
         {
           $set: { route: response.data },
         },
-        { new: true }
+        { new: true },
       );
 
       //return the route with populated orders
@@ -302,7 +306,7 @@ router.post("/generate-route", async (req, res) => {
       //update the status of routed orders as sheduled
       await orderModel.updateMany(
         { _id: { $in: response.data } },
-        { $set: { status: "sheduled" } }
+        { $set: { status: "sheduled" } },
       );
 
       return res.status(200).json({ route: route });
