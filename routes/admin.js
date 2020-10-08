@@ -389,7 +389,7 @@ async function validateDriver(user, isUpdate = false, id = null) {
           first: Joi.string()
             .pattern(/^[A-Za-z]+$/)
             .required(),
-          middle: Joi.string().required(),
+          middle: Joi.string().allow('', null), //middle name can be empty
           last: Joi.string().required(),
         },
         contact: {
