@@ -11,9 +11,9 @@ const jwt = require("jsonwebtoken");
 const storekeeperMiddleware = require("../middleware/storekeeper-middleware");
 
 const axios = require("axios"); // used to make request to routing engine
-const { route } = require("./admin");
 const Joi = require("@hapi/joi");
 const users = require("../models/users");
+const depotModel = require("../models/depot");
 const routingEngineLink = process.env.ROUTING_ENGINE || "http://localhost:8080";
 
 //only admin and storekeeper can execute all the functions implemented here
@@ -22,7 +22,7 @@ router.use(storekeeperMiddleware);
 router.get("/vehicles", (req, res) => {
   //retun list of vehicles
   vehicleModel
-    .find({})
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .exec()
     .then((vehicles) => {
       return res.status(200).json({ vehicles: vehicles });
@@ -51,7 +51,7 @@ router.get("/vehicle/:id", (req, res) => {
 router.get("/vehicle-types", (req, res) => {
   //retun list of vehicle types
   vehicleTypesModel
-    .find({})
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .exec()
     .then((vehicleTypes) => {
       return res.status(200).json({ vehicle_types: vehicleTypes });
@@ -82,11 +82,14 @@ router.get("/vehicle-types/:id", (req, res) => {
 router.post("/make-cluster", async (req, res) => {
   // get the request(emergancy level) form client
   const emergancyLvl = req.body.emergancyLevels;
+//validating the input
+  if (emergancyLvl == null || emergancyLvl == [])
+    return res.status(400).json({ error: "emergancyLevels can't be empty" });
   console.log(emergancyLvl);
   req.setTimeout(5 * 1000);
   //get the curruntly available vehicles from the database;
   const vehicles = await vehicleModel
-    .find()
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .where("is_available")
     .equals(true)
     .where("on_repair")
@@ -97,7 +100,7 @@ router.post("/make-cluster", async (req, res) => {
     })
     .select("_id");
 
-    console.log(vehicles)
+  console.log(vehicles);
 
   // get all the orders which are ready to deliver
   const orders = await orderModel
@@ -108,11 +111,11 @@ router.post("/make-cluster", async (req, res) => {
     .in(emergancyLvl)
     .select("_id location volume load");
 
-    if(orders.length<1) return res.json({schedule:[]});
+  if (orders.length < 1) return res.json({ schedule: [] });
 
   console.log(orders);
 
-  const depot = { lat: 1.2345, lang: 2.903 };
+  const depot = await depotModel.findOne();
 
   const enineParams = { vehicles, orders, depot };
 
@@ -124,7 +127,8 @@ router.post("/make-cluster", async (req, res) => {
       let schedule = response.data;
       schedule.forEach((doc) => {
         doc.date = new Date(Date.now());
-        clusteredOrders.push(...doc.orders)
+        doc.storekeeper = req.middleware._id;//accessing the user object from middleware and assing it to schedule object
+        clusteredOrders.push(...doc.orders);
       });
       console.log(clusteredOrders);
 
@@ -132,20 +136,20 @@ router.post("/make-cluster", async (req, res) => {
       const result = await scheduleModel.create(schedule);
 
       await orderModel.updateMany(
-        { _id: { $in: clusteredOrders} },
+        { _id: { $in: clusteredOrders } },
         { $set: { status: "clustered" } },
       );
 
       return res.json({ schedule: result });
     })
     .catch((error) => {
-      // console.log(error);
+      console.log(error);
     });
 });
 
 router.get("/drivers", (req, res) => {
   userModel
-    .find()
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .where("role")
     .equals("driver")
     .select("-password -__v")
@@ -159,7 +163,36 @@ router.get("/drivers", (req, res) => {
 });
 
 router.put("/assign-driver-to-cluster", (req, res) => {
-  console.log(req.body);
+  userModel
+    .findById(req.body.driver)
+    .exec()
+    .then((driverDoc) => {
+      console.log(driverDoc);
+      if (!driverDoc || driverDoc.role != "driver")
+        return res.status(400).json({ error: "Invalid driver_id provided" });
+    })
+    .catch((err) => {
+      return res.status(400).json({ error: "Invalid driver_id provided" });
+    });
+
+  scheduleModel
+    .findByIdAndUpdate(
+      req.body._id,
+      { $set: { driver: req.body.driver } },
+      { new: true },
+    )
+    .exec()
+    .then((cluster) => {
+      //checking if given id does not exist in the database
+      if (!cluster)
+        return res.status(400).json({ error: "Invalid cluster_id provided" });
+      return res
+        .status(200)
+        .json({ message: "driver assigned successfully", cluster: cluster });
+    })
+    .catch((err) => {
+      return res.status(400).json({ error: "Invalid cluster_id provided" });
+    });
 });
 
 //get list of orders route param(status) should be ready/pending/delivered/shcheduled
@@ -177,42 +210,38 @@ router.get("/orders/:status", (req, res) => {
     });
 });
 
-router.put("/add-order-dimension/:id", (req, res) => {
-  console.log(req.params.id);
-  console.log(req.body);
+//get the list of orders which's dimensions are not added
+router.get("/new-orders", (req, res) => {
   orderModel
-    .findByIdAndUpdate(
-      req.params.id,
-      {
-        $set: req.body,
-      },
-      { new: true }
-    )
+    .find()
     .exec()
-    .then((result) => {
-      return res.status(200).json({ msg: result });
+    .then((orders) => {
+      return res.status(200).json({ orders: orders });
     })
     .catch((err) => {
       return res.status(500).json({ error: err });
     });
 });
 
-router.put("/orders", async (req, res) => {
+//method to update the orders with their dimensions
+router.put("/add-order-dimension", async (req, res) => {
   //validating the update request data
   const { error, value } = validateOrder(req.body, true);
   //checking for bad(400) request error
   if (error || req.body.id == null) res.status(400).json({ error: error });
   else {
-    orderModel.findByIdAndUpdate(req.body.id, {load:value.load, volume:value.volume})
-    .exec()
-    .then((order) => {
-      //checking if given id does not exist in the database
-      if (!order)
-        return res.status(400).json({ error: "order not found" });
-      return res
-        .status(200)
-        .json({ message: "order updated successfully" });
-    });
+    orderModel
+      .findByIdAndUpdate(req.body.id, {
+        load: value.load,
+        volume: value.volume,
+        status: "ready",
+      })
+      .exec()
+      .then((order) => {
+        //checking if given id does not exist in the database
+        if (!order) return res.status(400).json({ error: "order not found" });
+        return res.status(200).json({ message: "order updated successfully" });
+      });
   }
 });
 
@@ -358,10 +387,136 @@ async function validateUserProfile(user, isUpdate = false, id = null) {
 
 function validateOrder(order, bulk = false) {
   const schema = Joi.object().keys({
-   volume:  Joi.number().required() , 
-   load: Joi.number().required()
+    volume: Joi.number().required(),
+    load: Joi.number().required(),
+    id: Joi.string().required(),
   });
   return schema.validate(order);
 }
+
+//generate the route for the given cluster
+router.post("/generate-route", async (req, res) => {
+  if (req.body.id == null) return res.status(400).json({ error: error });
+  const cluster = await scheduleModel
+    .findById(req.body.id)
+    .populate({
+      path: "orders",
+      select: "_id location",
+    })
+    .populate({
+      path: "route",
+      select: "_id location",
+    })
+    .select("-_id"); //last .select("-_id") statement removes the id of the cluster
+
+  // //don't allow to update another route
+  // if (cluster.route != null && cluster.route.length > 0)
+  //   return res.status(200).json({ route: cluster });
+
+  let clusterOrders = cluster.orders;
+
+  const depot = await depotModel.findOne();;
+
+  const enineParams = { orders: [depot, ...clusterOrders] }; //need to send the depot as the first object to the routing engine
+
+  console.log(enineParams);
+
+  //call the routing engine to generate route
+  axios
+    .post(`${routingEngineLink}/generate-route`, enineParams)
+    .then(async (response) => {
+      console.log(response.data);
+      //update the generated route to database
+      await scheduleModel.findByIdAndUpdate(
+        req.body.id,
+        {
+          $set: { route: response.data },
+        },
+        { new: true },
+      );
+
+      //return the route with populated orders
+      const route = await scheduleModel
+        .findById(req.body.id)
+        .populate({
+          path: "orders",
+          select: "_id location",
+        })
+        .populate({
+          path: "route",
+          select: "_id location",
+        })
+        .select("-_id"); //last .select("-_id") statement removes the id of the cluster
+
+      //update the status of routed orders as sheduled
+      await orderModel.updateMany(
+        { _id: { $in: response.data } },
+        { $set: { status: "sheduled" } },
+      );
+
+      return res.status(200).json({ route: route });
+    })
+    .catch((error) => console.log(error));
+});
+
+router.get("/scheduled-orders", (req, res) => {
+  scheduleModel
+    .find()
+    .populate({
+      path: "orders",
+    })
+    .populate({
+      path: "vehicle",
+      populate: {
+        path: "vehicle_type",
+      },
+    })
+    .populate({
+      path: "route",
+    })
+    .sort({ date: "desc" })
+    .exec()
+    .then((schedules) => {
+      return res.status(200).json({ schedules: schedules });
+    })
+    .catch((err) => {
+      return res.status(400).json({ error: err });
+    });
+});
+
+// list all the orders which are of status "ready" and return high,medium and low urgency orders seperately as json
+router.get("/orders", async (req, res) => {
+  const high = await orderModel
+    .find()
+    .where("status")
+    .equals("ready")
+    .where("emergency_level")
+    .equals(1)
+    .select("_id location");
+  const medium = await orderModel
+    .find()
+    .where("status")
+    .equals("ready")
+    .where("emergency_level")
+    .equals(2)
+    .select("_id location");
+  const low = await orderModel
+    .find()
+    .where("status")
+    .equals("ready")
+    .where("emergency_level")
+    .equals(3)
+    .select("_id location");
+  return res.status(200).json({ high, medium, low });
+});
+
+router.get("/depot", (req, res) => {
+  depotModel
+    .findOne()
+    .exec()
+    .then((depot) => {
+      return res.status(200).json({ depot: depot });
+    });
+});
 
 module.exports = router;

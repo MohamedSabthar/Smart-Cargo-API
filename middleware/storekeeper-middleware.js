@@ -8,7 +8,10 @@ module.exports = (req, res, next) => {
 
     const decodeToken = jwt.verify(token, secretkey);
     //if role is admin or store-keeper then accept the request
-    if (decodeToken.role == "admin" || decodeToken.role=="store-keeper") return next();
+    if (decodeToken.role == "admin" || decodeToken.role=="store-keeper") {
+      req.middleware = decodeToken; // pass the data to routes
+      return next();
+    }
     //else throw error
     return res.status(403).json({ error: "Unauthorized" });
   } catch (err) {

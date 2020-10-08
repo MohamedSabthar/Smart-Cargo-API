@@ -13,7 +13,7 @@ router.post("/sign-in", (req, res) => {
     });
 
   userModel
-    .find()
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .where("contact.email")
     .equals(req.body.email)
     .exec()
@@ -74,6 +74,8 @@ router.post("/forgot-password", (req, res) => {
     .findOne()
     .where("contact.email")
     .equals(req.body.email)
+    .where("deleted")
+    .equals(false)
     .exec()
     .then((user) => {
       if (!user) {
@@ -124,6 +126,8 @@ router.put("/reset-password/:token", (req, res) => {
       .findById(tokenParams[0])
       .where("reset_token")
       .equals(req.params.token)
+      .where("deleted")
+      .equals(false)
       .exec()
       .then((user) => {
         //if no users found then the token is invalid
