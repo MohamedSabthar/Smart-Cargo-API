@@ -16,6 +16,8 @@ router.post("/sign-in", (req, res) => {
     .find()
     .where("contact.email")
     .equals(req.body.email)
+    .where("deleted")
+    .equals(false)
     .exec()
     .then((user) => {
       // if no users found for given email throw error
@@ -74,6 +76,8 @@ router.post("/forgot-password", (req, res) => {
     .findOne()
     .where("contact.email")
     .equals(req.body.email)
+    .where("deleted")
+    .equals(false)
     .exec()
     .then((user) => {
       if (!user) {
@@ -124,6 +128,8 @@ router.put("/reset-password/:token", (req, res) => {
       .findById(tokenParams[0])
       .where("reset_token")
       .equals(req.params.token)
+      .where("deleted")
+      .equals(false)
       .exec()
       .then((user) => {
         //if no users found then the token is invalid

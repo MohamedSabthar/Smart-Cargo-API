@@ -7,7 +7,10 @@ const vehicleModel = mongoose.Schema({
   on_repair: { type: Boolean, default: false },// feild to indicate whether the vehicle is available or not
   capacity: { type: Number }, 
   fuel_economy: { type: Number },
-  load: { type: Number}
+  load: { type: Number},
+
+  //softdelete
+  deleted:{type:Boolean, default:false}
 });
 
 module.exports = mongoose.model("vehicles", vehicleModel);
