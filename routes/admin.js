@@ -165,7 +165,7 @@ router.post("/register-storekeeper", async (req, res) => {
 });
 
 //get request for drivers
-router.get("/storekeeper", (req, res) => {
+router.get("/storekeepers", (req, res) => {
   userModel
     .find()
     .where("role")
@@ -389,7 +389,7 @@ async function validateDriver(user, isUpdate = false, id = null) {
           first: Joi.string()
             .pattern(/^[A-Za-z]+$/)
             .required(),
-          middle: Joi.string().required(),
+          middle: Joi.string(),
           last: Joi.string().required(),
         },
         contact: {
