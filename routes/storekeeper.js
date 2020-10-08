@@ -111,7 +111,7 @@ router.post("/make-cluster", async (req, res) => {
 
   console.log(orders);
 
-  const depot = { lat: 1.2345, lang: 2.903 };
+  const depot = await depotModel.findOne();
 
   const enineParams = { vehicles, orders, depot };
 
@@ -265,12 +265,13 @@ router.post("/generate-route", async (req, res) => {
     })
     .select("-_id"); //last .select("-_id") statement removes the id of the cluster
 
-  if (cluster.route != null && cluster.route.length > 0)
-    return res.status(200).json({ route: cluster });
+  // //don't allow to update another route
+  // if (cluster.route != null && cluster.route.length > 0)
+  //   return res.status(200).json({ route: cluster });
 
   let clusterOrders = cluster.orders;
 
-  const depot = { _id: "hardcoded", location: { lat: 1.234, lang: 4.566 } };
+  const depot = await depotModel.findOne();;
 
   const enineParams = { orders: [depot, ...clusterOrders] }; //need to send the depot as the first object to the routing engine
 
