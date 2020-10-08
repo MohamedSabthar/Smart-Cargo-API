@@ -667,20 +667,20 @@ router.get("/track-vehicle", (req, res) => {
   return res.status(201).json(res.body);
 });
 
-//get storekeeper list
-router.get("/storekeepers", (req, res) => {
-  userModel
-    .find()
-    .where("role")
-    .equals("store-keeper")
-    .exec()
-    .then((storekeepers) => {
-      return res.status(200).json({ storekeepers: storekeepers });
-    })
-    .catch((err) => {
-      return res.status(500).json({ error: err });
-    });
-});
+// //get storekeeper list
+// router.get("/storekeepers", (req, res) => {
+//   userModel
+//     .find()
+//     .where("role")
+//     .equals("store-keeper")
+//     .exec()
+//     .then((storekeepers) => {
+//       return res.status(200).json({ storekeepers: storekeepers });
+//     })
+//     .catch((err) => {
+//       return res.status(500).json({ error: err });
+//     });
+// });
 
 //get driver's assinged-shcedule
 router.get("/driver-schedules/:id", (req, res) => {
@@ -723,6 +723,9 @@ router.get("/storekeeper-schedules/:id", (req, res) => {
       populate: {
         path: "vehicle_type",
       },
+    })
+    .populate({
+      path:"driver"
     })
     .sort({ date: "desc" })
     .exec()
