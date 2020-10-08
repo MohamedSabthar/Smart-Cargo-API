@@ -24,6 +24,9 @@ const userSchema = new mongoose.Schema({
   license_no: { type: String },
   allowed_vehicle: { type: [mongoose.Schema.Types.ObjectId] }, // contians list of _id from vechicleTypeModel
   user_is_available: { type: Boolean, default: true },
+
+  //softdelete
+  deleted:{type:Boolean, default:false}
 });
 
 module.exports = mongoose.model("users", userSchema);

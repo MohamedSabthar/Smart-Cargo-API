@@ -18,7 +18,7 @@ router.use(storekeeperMiddleware);
 router.get("/vehicles", (req, res) => {
   //retun list of vehicles
   vehicleModel
-    .find({})
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .exec()
     .then((vehicles) => {
       return res.status(200).json({ vehicles: vehicles });
@@ -47,7 +47,7 @@ router.get("/vehicle/:id", (req, res) => {
 router.get("/vehicle-types", (req, res) => {
   //retun list of vehicle types
   vehicleTypesModel
-    .find({})
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .exec()
     .then((vehicleTypes) => {
       return res.status(200).json({ vehicle_types: vehicleTypes });
@@ -85,7 +85,7 @@ router.post("/make-cluster", async (req, res) => {
   req.setTimeout(5 * 1000);
   //get the curruntly available vehicles from the database;
   const vehicles = await vehicleModel
-    .find()
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .where("is_available")
     .equals(true)
     .where("on_repair")
@@ -145,7 +145,7 @@ router.post("/make-cluster", async (req, res) => {
 
 router.get("/drivers", (req, res) => {
   userModel
-    .find()
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .where("role")
     .equals("driver")
     .select("-password -__v")

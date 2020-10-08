@@ -53,7 +53,7 @@ router.post("/register-driver", async (req, res) => {
 //get request for drivers
 router.get("/drivers", (req, res) => {
   userModel
-    .find()
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .where("role")
     .equals("driver")
     .select("-password -__v")
@@ -84,16 +84,28 @@ router.post("/update-driver/:userId", async (req, res) => {
 //delete driver
 router.delete("/delete-driver/:userId", (req, res) => {
   const id = req.params.userId;
+  // userModel
+  //   .findByIdAndDelete({ _id: id })
+  //   .then((result) => {
+  //     //checking if given id does not exist in the database
+  //     if (!result) return res.status(400).json({ error: "Driver not found" });
+  //     return res.status(200).json({ message: "Driver deleted successfully" });
+  //   })
+  //   .catch((err) => {
+  //     return res.status(500).json({ error: err });
+  //   });
+
+  //softdelete
   userModel
-    .findByIdAndDelete({ _id: id })
-    .then((result) => {
-      //checking if given id does not exist in the database
-      if (!result) return res.status(400).json({ error: "Driver not found" });
-      return res.status(200).json({ message: "Driver deleted successfully" });
-    })
-    .catch((err) => {
-      return res.status(500).json({ error: err });
-    });
+  .findByIdAndUpdate({ _id: id },{ $set: {deleted:true} })
+  .then((result) => {
+    //checking if given id does not exist in the database
+    if (!result) return res.status(400).json({ error: "Driver not found" });
+    return res.status(200).json({ message: "Driver deleted successfully" });
+  })
+  .catch((err) => {
+    return res.status(500).json({ error: err });
+  });
 });
 
 //update storekeeper
@@ -123,8 +135,25 @@ router.post("/update-storekeeper/:userId", async (req, res) => {
 //delete storekeeper
 router.delete("/delete-storekeeper/:userId", (req, res) => {
   const id = req.params.userId;
-  userModel
-    .findByIdAndDelete({ _id: id })
+  // userModel
+  //   .findByIdAndDelete({ _id: id })
+  //   .then((result) => {
+  //     //checking if given id does not exist in the database
+  //     if (!result)
+  //       return res.status(400).json({ error: "Storekeeper not found" });
+  //     return res
+  //       .status(200)
+  //       .json({ message: "Storekeeper deleted successfully" });
+  //   })
+  //   .catch((err) => {
+  //     return res.status(500).json({
+  //       error: err,
+  //     });
+  //   });
+
+  //softdelete
+    userModel
+    .findByIdAndUpdate({ _id: id },{ $set: {deleted:true} })
     .then((result) => {
       //checking if given id does not exist in the database
       if (!result)
@@ -167,7 +196,7 @@ router.post("/register-storekeeper", async (req, res) => {
 //get request for drivers
 router.get("/storekeepers", (req, res) => {
   userModel
-    .find()
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .where("role")
     .equals("store-keeper")
     .select("-password -__v")
@@ -274,8 +303,22 @@ router.put("/update-vehicle-type/:id", async (req, res) => {
 });
 
 router.delete("/delete-vehicle-type/:id", (req, res) => {
-  vehicleTypeModel
-    .findByIdAndDelete(req.params.id)
+  // vehicleTypeModel
+  //   .findByIdAndDelete(req.params.id)
+  //   .exec()
+  //   .then((vehicleType) => {
+  //     //checking if given id does not exist in the database
+  //     if (!vehicleType)
+  //       return res.status(400).json({ error: "Vehicle type not found" });
+  //     return res.status(200).json({ message: "vehicle deleted successfully" });
+  //   })
+  //   .catch((err) => {
+  //     return res.status(500).json({ error: err });
+  //   });
+
+  //softdelete
+    vehicleTypeModel
+    .findByIdAndUpdate(req.params.id,{$set:{deleted:true}})
     .exec()
     .then((vehicleType) => {
       //checking if given id does not exist in the database
@@ -328,8 +371,23 @@ router.put("/update-vehicle/:id", async (req, res) => {
 });
 
 router.delete("/delete-vehicle/:id", (req, res) => {
+  // vehicleModel
+  //   .findByIdAndDelete(req.params.id)
+  //   .exec()
+  //   .then((vehicle) => {
+  //     //checking whether the given id already exist in database
+  //     if (!vehicle) return res.status(400).json({ error: "vehicle not found" });
+  //     return res.status(200).json({ message: "vehicle deleted successfully" });
+  //   })
+  //   .catch((err) => {
+  //     return res.status(500).json({
+  //       error: err,
+  //     });
+  //   });
+
+  //softdelete
   vehicleModel
-    .findByIdAndDelete(req.params.id)
+    .findByIdAndUpdate(req.params.id,{$set:{deleted:true}})
     .exec()
     .then((vehicle) => {
       //checking whether the given id already exist in database
