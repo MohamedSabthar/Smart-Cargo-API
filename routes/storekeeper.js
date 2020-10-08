@@ -4,11 +4,15 @@ const vehicleTypesModel = require("../models/vehicle-type");
 const orderModel = require("../models/orders");
 const userModel = require("../models/users");
 const scheduleModel = require("../models/schedule");
+const orders = require("../models/orders");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const storekeeperMiddleware = require("../middleware/storekeeper-middleware");
 
 const axios = require("axios"); // used to make request to routing engine
 const Joi = require("@hapi/joi");
+const users = require("../models/users");
 const depotModel = require("../models/depot");
 const routingEngineLink = process.env.ROUTING_ENGINE || "http://localhost:8080";
 
@@ -240,6 +244,146 @@ router.put("/add-order-dimension", async (req, res) => {
       });
   }
 });
+
+//get user details in setting page 
+router.get("/settings/:userId", async (req,res) => {
+  const id = req.params.userId;
+
+  userModel.findById({ _id: id }).then((result) => {
+    console.log(result);
+    return res.status(201).json({
+      result
+    });
+  })  
+  .catch((err) => {
+    return res.status(500).json({
+      error: err,
+    });
+  });
+});
+
+//update user profile details
+router.put("/settings/:userId", async (req,res) => {
+  const id = req.params.userId;
+  const { error, value } = await validateUserProfile(req.body, true, id);
+  //checking for bad(400) request error 
+  if (error) return res.status(400).json({ error: error });
+  userModel.findByIdAndUpdate({ _id: id }, { $set: value },{
+    new: true
+  }).then((result) => {
+    //checking if given id does not exist in the database
+    if (!result) return res.status(400).json({ error: "UserProfile not found" });
+    return res.status(200).json({ message: "User Profile updated successfully",result : result });
+  });
+});
+
+//old password confirm check
+router.put("/password-change/:userId", async (req,res) => {
+  const id = req.params.userId;
+
+  if(!req.body.old_password || !req.body.new_password || !req.body.confirm_password)
+    return res.status(401).json({
+      message: "You have entered invalid credentails",
+    });
+    userModel.findById({ _id: id }).then((user) => {
+      bcrypt.compare(req.body.old_password, user.password, (err, isMatched) => {
+        if(isMatched) {
+          //compare new password and confirm password
+          bcrypt.compare(req.body.new_password, req.body.confirm_password, (err, isMatched) => {
+            //if new password and confirm password same check 
+            if(isMatched){
+              //change new password to hash
+              bcrypt.hash(req.body.new_password, 10, (err, hash) => {
+                if (err) {
+                  return res.status(500).json({
+                    error: err,
+                  });
+                }
+                user.set({ password: hash }).save((err, user) => {
+                  //if any error occured during saving password notify  the user
+                  if (err) {
+                    return res.status(500).json({
+                      error: err,
+                    });
+                  }
+                  return res
+                    .status(200)
+                    .json({ message: "password changed successful"});
+                });
+              });
+
+            }
+            //return error if password doesn't match or an sever errot
+            if (err) {
+              return res.status(500).json({
+                error: err,
+              });
+            }
+            return res.status(401).json({
+              message: "You have entered not same password"
+            });
+          });
+
+        }
+        //return error if password desnt match or on server error
+        if (err) {
+          return res.status(500).json({
+            error: err,
+          });
+        }
+        return res.status(401).json({
+          message: "you have entered invalid passwords"
+        });
+      });
+    })
+    .catch((err) => {
+      return res.status(500).json({
+        error: err,
+      });
+    });
+});
+
+//validating user profile update 
+async function validateUserProfile(user, isUpdate = false, id = null) {
+  let query = userModel.find({
+    "_id": id,
+  });
+
+  //extend the query if the request is update
+  if (isUpdate) query.where("_id").ne(id);
+  const validation = await query
+    .exec()
+    .then((userdoc) => {
+      if (userdoc.length < 1) {
+        return { error: "Can't find user", value: {} };
+      }
+      const schema = Joi.object().keys({
+        name: {
+          first: Joi.string()
+            .pattern(/^[A-Za-z]+$/)
+            .required(),
+          middle: Joi.string().required(),
+          last: Joi.string().required(),
+        },
+        contact: {
+          email: Joi.string().email().required().lowercase(),
+          phone: Joi.string().pattern(
+            /^(?:0|94|\+94)?(?:(11|21|23|24|25|26|27|31|32|33|34|35|36|37|38|41|45|47|51|52|54|55|57|63|65|66|67|81|912)(0|2|3|4|5|7|9)|7(0|1|2|5|6|7|8)\d)\d{6}$/,
+          ),
+        },
+        address: {
+          no: Joi.string().required(),
+          street: Joi.string().required(),
+          city: Joi.string().required(),
+        },
+      });
+      return schema.validate(user, { abortEarly: false });
+    })
+    .catch((err) => {
+      return { error: err, value: {} };
+    });
+  return validation;
+}
 
 function validateOrder(order, bulk = false) {
   const schema = Joi.object().keys({
