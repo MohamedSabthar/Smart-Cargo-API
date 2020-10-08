@@ -13,11 +13,9 @@ router.post("/sign-in", (req, res) => {
     });
 
   userModel
-    .find()
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .where("contact.email")
     .equals(req.body.email)
-    .where("deleted")
-    .equals(false)
     .exec()
     .then((user) => {
       // if no users found for given email throw error

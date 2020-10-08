@@ -53,11 +53,9 @@ router.post("/register-driver", async (req, res) => {
 //get request for drivers
 router.get("/drivers", (req, res) => {
   userModel
-    .find()
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .where("role")
     .equals("driver")
-    .where("deleted")
-    .equals(false)
     .select("-password -__v")
     .exec()
     .then((drivers) => {
@@ -198,11 +196,9 @@ router.post("/register-storekeeper", async (req, res) => {
 //get request for drivers
 router.get("/storekeepers", (req, res) => {
   userModel
-    .find()
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .where("role")
     .equals("store-keeper")
-    .where("deleted")
-    .equals(false)
     .select("-password -__v")
     .exec()
     .then((storekeepers) => {
