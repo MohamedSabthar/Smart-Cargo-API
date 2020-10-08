@@ -154,7 +154,7 @@ router.post("/register-storekeeper", async (req, res) => {
     .save()
     .then((result) => {
       return res.status(201).json({
-        message: "Store-keeper registered successfully",
+        message: "Store-keeper registered successfully", storekeeper:result
       });
     })
     .catch((err) => {
@@ -165,7 +165,7 @@ router.post("/register-storekeeper", async (req, res) => {
 });
 
 //get request for drivers
-router.get("/storekeeper", (req, res) => {
+router.get("/storekeepers", (req, res) => {
   userModel
     .find()
     .where("role")
@@ -201,7 +201,7 @@ async function validateStoreKeeper(user, isUpdate = false, id = null) {
           first: Joi.string()
             .pattern(/^[A-Za-z]+$/)
             .required(),
-          middle: Joi.string().required(),
+          middle: Joi.string().allow('', null),
           last: Joi.string().required(),
         },
         contact: {
