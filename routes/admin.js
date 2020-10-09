@@ -11,6 +11,7 @@ const scheduleModel = require("../models/schedule");
 
 const adminMiddleware = require("../middleware/admin-middleware");
 const schedule = require("../models/schedule");
+const registratinMail = require("../email/registration-mail");
 
 //only admin can execute all the functions implemented here
 router.use(adminMiddleware);
@@ -28,6 +29,15 @@ router.post("/register-driver", async (req, res) => {
   user
     .save()
     .then((driver) => {
+      //generating a random token and saving it to the database
+      let token = generateToken(driver._id);
+
+      user.set({ reset_token: token });
+      user.save((err, user) => {
+        //sent the mail to the user
+        registratinMail(user, token);
+      });
+
       return res.status(201).json({
         message: "driver registered successfully",
         driver: driver,
@@ -43,7 +53,7 @@ router.post("/register-driver", async (req, res) => {
 //get request for drivers
 router.get("/drivers", (req, res) => {
   userModel
-    .find()
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .where("role")
     .equals("driver")
     .select("-password -__v")
@@ -74,16 +84,28 @@ router.post("/update-driver/:userId", async (req, res) => {
 //delete driver
 router.delete("/delete-driver/:userId", (req, res) => {
   const id = req.params.userId;
+  // userModel
+  //   .findByIdAndDelete({ _id: id })
+  //   .then((result) => {
+  //     //checking if given id does not exist in the database
+  //     if (!result) return res.status(400).json({ error: "Driver not found" });
+  //     return res.status(200).json({ message: "Driver deleted successfully" });
+  //   })
+  //   .catch((err) => {
+  //     return res.status(500).json({ error: err });
+  //   });
+
+  //softdelete
   userModel
-    .findByIdAndDelete({ _id: id })
-    .then((result) => {
-      //checking if given id does not exist in the database
-      if (!result) return res.status(400).json({ error: "Driver not found" });
-      return res.status(200).json({ message: "Driver deleted successfully" });
-    })
-    .catch((err) => {
-      return res.status(500).json({ error: err });
-    });
+  .findByIdAndUpdate({ _id: id },{ $set: {deleted:true} })
+  .then((result) => {
+    //checking if given id does not exist in the database
+    if (!result) return res.status(400).json({ error: "Driver not found" });
+    return res.status(200).json({ message: "Driver deleted successfully" });
+  })
+  .catch((err) => {
+    return res.status(500).json({ error: err });
+  });
 });
 
 //update storekeeper
@@ -113,8 +135,25 @@ router.post("/update-storekeeper/:userId", async (req, res) => {
 //delete storekeeper
 router.delete("/delete-storekeeper/:userId", (req, res) => {
   const id = req.params.userId;
-  userModel
-    .findByIdAndDelete({ _id: id })
+  // userModel
+  //   .findByIdAndDelete({ _id: id })
+  //   .then((result) => {
+  //     //checking if given id does not exist in the database
+  //     if (!result)
+  //       return res.status(400).json({ error: "Storekeeper not found" });
+  //     return res
+  //       .status(200)
+  //       .json({ message: "Storekeeper deleted successfully" });
+  //   })
+  //   .catch((err) => {
+  //     return res.status(500).json({
+  //       error: err,
+  //     });
+  //   });
+
+  //softdelete
+    userModel
+    .findByIdAndUpdate({ _id: id },{ $set: {deleted:true} })
     .then((result) => {
       //checking if given id does not exist in the database
       if (!result)
@@ -132,7 +171,7 @@ router.delete("/delete-storekeeper/:userId", (req, res) => {
 
 //storekeeper-registration
 router.post("/register-storekeeper", async (req, res) => {
-  req.body.role = "storekeeper"; //set the role to driver
+  req.body.role = "store-keeper"; //set the role to driver
   //validating driver registration
   const { error, value } = await validateStoreKeeper(req.body);
 
@@ -144,7 +183,7 @@ router.post("/register-storekeeper", async (req, res) => {
     .save()
     .then((result) => {
       return res.status(201).json({
-        message: "Store-keeper registered successfully",
+        message: "Store-keeper registered successfully", storekeeper:result
       });
     })
     .catch((err) => {
@@ -155,11 +194,11 @@ router.post("/register-storekeeper", async (req, res) => {
 });
 
 //get request for drivers
-router.get("/storekeeper", (req, res) => {
+router.get("/storekeepers", (req, res) => {
   userModel
-    .find()
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .where("role")
-    .equals("storekeeper")
+    .equals("store-keeper")
     .select("-password -__v")
     .exec()
     .then((storekeepers) => {
@@ -181,8 +220,8 @@ async function validateStoreKeeper(user, isUpdate = false, id = null) {
 
   const validation = await query
     .exec()
-    .then((drivers) => {
-      if (drivers.length >= 1) {
+    .then((storekeepers) => {
+      if (storekeepers.length >= 1) {
         return { error: "Store-keeper is already registered", value: {} };
       }
 
@@ -191,7 +230,7 @@ async function validateStoreKeeper(user, isUpdate = false, id = null) {
           first: Joi.string()
             .pattern(/^[A-Za-z]+$/)
             .required(),
-          middle: Joi.string().required(),
+          middle: Joi.string().allow('', null),
           last: Joi.string().required(),
         },
         contact: {
@@ -264,8 +303,22 @@ router.put("/update-vehicle-type/:id", async (req, res) => {
 });
 
 router.delete("/delete-vehicle-type/:id", (req, res) => {
-  vehicleTypeModel
-    .findByIdAndDelete(req.params.id)
+  // vehicleTypeModel
+  //   .findByIdAndDelete(req.params.id)
+  //   .exec()
+  //   .then((vehicleType) => {
+  //     //checking if given id does not exist in the database
+  //     if (!vehicleType)
+  //       return res.status(400).json({ error: "Vehicle type not found" });
+  //     return res.status(200).json({ message: "vehicle deleted successfully" });
+  //   })
+  //   .catch((err) => {
+  //     return res.status(500).json({ error: err });
+  //   });
+
+  //softdelete
+    vehicleTypeModel
+    .findByIdAndUpdate(req.params.id,{$set:{deleted:true}})
     .exec()
     .then((vehicleType) => {
       //checking if given id does not exist in the database
@@ -318,8 +371,23 @@ router.put("/update-vehicle/:id", async (req, res) => {
 });
 
 router.delete("/delete-vehicle/:id", (req, res) => {
+  // vehicleModel
+  //   .findByIdAndDelete(req.params.id)
+  //   .exec()
+  //   .then((vehicle) => {
+  //     //checking whether the given id already exist in database
+  //     if (!vehicle) return res.status(400).json({ error: "vehicle not found" });
+  //     return res.status(200).json({ message: "vehicle deleted successfully" });
+  //   })
+  //   .catch((err) => {
+  //     return res.status(500).json({
+  //       error: err,
+  //     });
+  //   });
+
+  //softdelete
   vehicleModel
-    .findByIdAndDelete(req.params.id)
+    .findByIdAndUpdate(req.params.id,{$set:{deleted:true}})
     .exec()
     .then((vehicle) => {
       //checking whether the given id already exist in database
@@ -379,7 +447,7 @@ async function validateDriver(user, isUpdate = false, id = null) {
           first: Joi.string()
             .pattern(/^[A-Za-z]+$/)
             .required(),
-          middle: Joi.string().required(),
+          middle: Joi.string().allow('', null), //middle name can be empty
           last: Joi.string().required(),
         },
         contact: {
@@ -657,20 +725,20 @@ router.get("/track-vehicle", (req, res) => {
   return res.status(201).json(res.body);
 });
 
-//get storekeeper list
-router.get("/storekeepers", (req, res) => {
-  userModel
-    .find()
-    .where("role")
-    .equals("storekeeper")
-    .exec()
-    .then((storekeepers) => {
-      return res.status(200).json({ storekeepers: storekeepers });
-    })
-    .catch((err) => {
-      return res.status(500).json({ error: err });
-    });
-});
+// //get storekeeper list
+// router.get("/storekeepers", (req, res) => {
+//   userModel
+//     .find()
+//     .where("role")
+//     .equals("store-keeper")
+//     .exec()
+//     .then((storekeepers) => {
+//       return res.status(200).json({ storekeepers: storekeepers });
+//     })
+//     .catch((err) => {
+//       return res.status(500).json({ error: err });
+//     });
+// });
 
 //get driver's assinged-shcedule
 router.get("/driver-schedules/:id", (req, res) => {
@@ -685,9 +753,10 @@ router.get("/driver-schedules/:id", (req, res) => {
     .populate({
       path: "vehicle",
       populate: {
-        path: 'vehicle_type',
+        path: "vehicle_type",
       },
-    }).sort({date: 'desc'})
+    })
+    .sort({ date: "desc" })
     .exec()
     .then((schedules) => {
       return res.status(200).json({ schedules: schedules });
@@ -710,9 +779,13 @@ router.get("/storekeeper-schedules/:id", (req, res) => {
     .populate({
       path: "vehicle",
       populate: {
-        path: 'vehicle_type',
+        path: "vehicle_type",
       },
-    }).sort({date: 'desc'})
+    })
+    .populate({
+      path:"driver"
+    })
+    .sort({ date: "desc" })
     .exec()
     .then((schedules) => {
       return res.status(200).json({ schedules: schedules });
@@ -721,6 +794,11 @@ router.get("/storekeeper-schedules/:id", (req, res) => {
       return res.status(400).json({ error: err });
     });
 });
+
+function generateToken(id) {
+  let validity = Date.now() + 5 * 60000; //adding 5 min from now
+  return `${id}_${Math.random().toString(20).substr(2)}_${validity}`;
+}
 
 module.exports = router;
 

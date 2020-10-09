@@ -4,13 +4,16 @@ const vehicleTypesModel = require("../models/vehicle-type");
 const orderModel = require("../models/orders");
 const userModel = require("../models/users");
 const scheduleModel = require("../models/schedule");
+const orders = require("../models/orders");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const storekeeperMiddleware = require("../middleware/storekeeper-middleware");
 
 const axios = require("axios"); // used to make request to routing engine
-const { route } = require("./admin");
 const Joi = require("@hapi/joi");
-const orders = require("../models/orders");
+const users = require("../models/users");
+const depotModel = require("../models/depot");
 const routingEngineLink = process.env.ROUTING_ENGINE || "http://localhost:8080";
 
 //only admin and storekeeper can execute all the functions implemented here
@@ -19,7 +22,7 @@ router.use(storekeeperMiddleware);
 router.get("/vehicles", (req, res) => {
   //retun list of vehicles
   vehicleModel
-    .find({})
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .exec()
     .then((vehicles) => {
       return res.status(200).json({ vehicles: vehicles });
@@ -48,7 +51,7 @@ router.get("/vehicle/:id", (req, res) => {
 router.get("/vehicle-types", (req, res) => {
   //retun list of vehicle types
   vehicleTypesModel
-    .find({})
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .exec()
     .then((vehicleTypes) => {
       return res.status(200).json({ vehicle_types: vehicleTypes });
@@ -79,11 +82,14 @@ router.get("/vehicle-types/:id", (req, res) => {
 router.post("/make-cluster", async (req, res) => {
   // get the request(emergancy level) form client
   const emergancyLvl = req.body.emergancyLevels;
+//validating the input
+  if (emergancyLvl == null || emergancyLvl == [])
+    return res.status(400).json({ error: "emergancyLevels can't be empty" });
   console.log(emergancyLvl);
   req.setTimeout(5 * 1000);
   //get the curruntly available vehicles from the database;
   const vehicles = await vehicleModel
-    .find()
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .where("is_available")
     .equals(true)
     .where("on_repair")
@@ -109,7 +115,7 @@ router.post("/make-cluster", async (req, res) => {
 
   console.log(orders);
 
-  const depot = { lat: 1.2345, lang: 2.903 };
+  const depot = await depotModel.findOne();
 
   const enineParams = { vehicles, orders, depot };
 
@@ -121,6 +127,7 @@ router.post("/make-cluster", async (req, res) => {
       let schedule = response.data;
       schedule.forEach((doc) => {
         doc.date = new Date(Date.now());
+        doc.storekeeper = req.middleware._id;//accessing the user object from middleware and assing it to schedule object
         clusteredOrders.push(...doc.orders);
       });
       console.log(clusteredOrders);
@@ -130,7 +137,7 @@ router.post("/make-cluster", async (req, res) => {
 
       await orderModel.updateMany(
         { _id: { $in: clusteredOrders } },
-        { $set: { status: "clustered" } }
+        { $set: { status: "clustered" } },
       );
 
       return res.json({ schedule: result });
@@ -142,7 +149,7 @@ router.post("/make-cluster", async (req, res) => {
 
 router.get("/drivers", (req, res) => {
   userModel
-    .find()
+    .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
     .where("role")
     .equals("driver")
     .select("-password -__v")
@@ -172,7 +179,7 @@ router.put("/assign-driver-to-cluster", (req, res) => {
     .findByIdAndUpdate(
       req.body._id,
       { $set: { driver: req.body.driver } },
-      { new: true }
+      { new: true },
     )
     .exec()
     .then((cluster) => {
@@ -207,8 +214,6 @@ router.get("/orders/:status", (req, res) => {
 router.get("/new-orders", (req, res) => {
   orderModel
     .find()
-    .where("volume")
-    .equals(null)
     .exec()
     .then((orders) => {
       return res.status(200).json({ orders: orders });
@@ -219,26 +224,6 @@ router.get("/new-orders", (req, res) => {
 });
 
 //method to update the orders with their dimensions
-router.put("/add-order-dimension/:id", (req, res) => {
-  console.log(req.params.id);
-  console.log(req.body);
-  orderModel
-    .findByIdAndUpdate(
-      req.params.id,
-      {
-        $set: req.body,
-      },
-      { new: true }
-    )
-    .exec()
-    .then((result) => {
-      return res.status(200).json({ msg: result });
-    })
-    .catch((err) => {
-      return res.status(500).json({ error: err });
-    });
-});
-
 router.put("/add-order-dimension", async (req, res) => {
   //validating the update request data
   const { error, value } = validateOrder(req.body, true);
@@ -249,6 +234,7 @@ router.put("/add-order-dimension", async (req, res) => {
       .findByIdAndUpdate(req.body.id, {
         load: value.load,
         volume: value.volume,
+        status: "ready",
       })
       .exec()
       .then((order) => {
@@ -259,10 +245,151 @@ router.put("/add-order-dimension", async (req, res) => {
   }
 });
 
+//get user details in setting page 
+router.get("/settings/:userId", async (req,res) => {
+  const id = req.params.userId;
+
+  userModel.findById({ _id: id }).then((result) => {
+    console.log(result);
+    return res.status(201).json({
+      result
+    });
+  })  
+  .catch((err) => {
+    return res.status(500).json({
+      error: err,
+    });
+  });
+});
+
+//update user profile details
+router.put("/settings/:userId", async (req,res) => {
+  const id = req.params.userId;
+  const { error, value } = await validateUserProfile(req.body, true, id);
+  //checking for bad(400) request error 
+  if (error) return res.status(400).json({ error: error });
+  userModel.findByIdAndUpdate({ _id: id }, { $set: value },{
+    new: true
+  }).then((result) => {
+    //checking if given id does not exist in the database
+    if (!result) return res.status(400).json({ error: "UserProfile not found" });
+    return res.status(200).json({ message: "User Profile updated successfully",result : result });
+  });
+});
+
+//old password confirm check
+router.put("/password-change/:userId", async (req,res) => {
+  const id = req.params.userId;
+
+  if(!req.body.old_password || !req.body.new_password || !req.body.confirm_password)
+    return res.status(401).json({
+      message: "You have entered invalid credentails",
+    });
+    userModel.findById({ _id: id }).then((user) => {
+      bcrypt.compare(req.body.old_password, user.password, (err, isMatched) => {
+        if(isMatched) {
+          //compare new password and confirm password
+          bcrypt.compare(req.body.new_password, req.body.confirm_password, (err, isMatched) => {
+            //if new password and confirm password same check 
+            if(isMatched){
+              //change new password to hash
+              bcrypt.hash(req.body.new_password, 10, (err, hash) => {
+                if (err) {
+                  return res.status(500).json({
+                    error: err,
+                  });
+                }
+                user.set({ password: hash }).save((err, user) => {
+                  //if any error occured during saving password notify  the user
+                  if (err) {
+                    return res.status(500).json({
+                      error: err,
+                    });
+                  }
+                  return res
+                    .status(200)
+                    .json({ message: "password changed successful"});
+                });
+              });
+
+            }
+            //return error if password doesn't match or an sever errot
+            if (err) {
+              return res.status(500).json({
+                error: err,
+              });
+            }
+            return res.status(401).json({
+              message: "You have entered not same password"
+            });
+          });
+
+        }
+        //return error if password desnt match or on server error
+        if (err) {
+          return res.status(500).json({
+            error: err,
+          });
+        }
+        return res.status(401).json({
+          message: "you have entered invalid passwords"
+        });
+      });
+    })
+    .catch((err) => {
+      return res.status(500).json({
+        error: err,
+      });
+    });
+});
+
+//validating user profile update 
+async function validateUserProfile(user, isUpdate = false, id = null) {
+  let query = userModel.find({
+    "_id": id,
+  });
+
+  //extend the query if the request is update
+  if (isUpdate) query.where("_id").ne(id);
+  const validation = await query
+    .exec()
+    .then((userdoc) => {
+      if (userdoc.length < 1) {
+        return { error: "Can't find user", value: {} };
+      }
+      const schema = Joi.object().keys({
+        name: {
+          first: Joi.string()
+            .pattern(/^[A-Za-z]+$/)
+            .required(),
+          middle: Joi.string().required(),
+          last: Joi.string().required(),
+        },
+        contact: {
+          email: Joi.string().email().required().lowercase(),
+          phone: Joi.string().pattern(
+            /^(?:0|94|\+94)?(?:(11|21|23|24|25|26|27|31|32|33|34|35|36|37|38|41|45|47|51|52|54|55|57|63|65|66|67|81|912)(0|2|3|4|5|7|9)|7(0|1|2|5|6|7|8)\d)\d{6}$/,
+          ),
+        },
+        address: {
+          no: Joi.string().required(),
+          street: Joi.string().required(),
+          city: Joi.string().required(),
+        },
+      });
+      return schema.validate(user, { abortEarly: false });
+    })
+    .catch((err) => {
+      return { error: err, value: {} };
+    });
+  return validation;
+}
+
 function validateOrder(order, bulk = false) {
   const schema = Joi.object().keys({
     volume: Joi.number().required(),
     load: Joi.number().required(),
+    id: Joi.string().required(),
   });
   return schema.validate(order);
 }
@@ -282,12 +409,13 @@ router.post("/generate-route", async (req, res) => {
     })
     .select("-_id"); //last .select("-_id") statement removes the id of the cluster
 
-  if (cluster.route != null && cluster.route.length > 0)
-    return res.status(200).json({ route: cluster });
+  // //don't allow to update another route
+  // if (cluster.route != null && cluster.route.length > 0)
+  //   return res.status(200).json({ route: cluster });
 
   let clusterOrders = cluster.orders;
 
-  const depot = { _id: "hardcoded", location: { lat: 1.234, lang: 4.566 } };
+  const depot = await depotModel.findOne();;
 
   const enineParams = { orders: [depot, ...clusterOrders] }; //need to send the depot as the first object to the routing engine
 
@@ -304,7 +432,7 @@ router.post("/generate-route", async (req, res) => {
         {
           $set: { route: response.data },
         },
-        { new: true }
+        { new: true },
       );
 
       //return the route with populated orders
@@ -323,7 +451,7 @@ router.post("/generate-route", async (req, res) => {
       //update the status of routed orders as sheduled
       await orderModel.updateMany(
         { _id: { $in: response.data } },
-        { $set: { status: "sheduled" } }
+        { $set: { status: "sheduled" } },
       );
 
       return res.status(200).json({ route: route });
@@ -342,8 +470,9 @@ router.get("/scheduled-orders", (req, res) => {
       populate: {
         path: "vehicle_type",
       },
-    }).populate({
-      path: "route"
+    })
+    .populate({
+      path: "route",
     })
     .sort({ date: "desc" })
     .exec()
@@ -442,5 +571,14 @@ router.get("/clustered-statistics", async (req, res) => {
 
 });
 
+
+router.get("/depot", (req, res) => {
+  depotModel
+    .findOne()
+    .exec()
+    .then((depot) => {
+      return res.status(200).json({ depot: depot });
+    });
+});
 
 module.exports = router;
