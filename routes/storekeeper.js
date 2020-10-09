@@ -381,4 +381,66 @@ router.get("/orders", async (req, res) => {
   return res.status(200).json({ high, medium, low });
 });
 
+
+//list of scheduled orders for dashboard
+router.get("/clustered-statistics", async (req, res) => {
+  scheduleModel.find().populate({
+    path:"orders"
+  })
+  // .aggregate(
+    // [ 
+    //   {
+    //     $group: {
+    //       _id:{ date: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }},
+    //       orders: {$sum :{ $size: "$orders" }}
+    //     }
+    //   }
+    // ])
+  .exec().then((clusters) => {
+    let statistics= {}
+    let high = {}
+    let medium = {}
+    let low = {}
+    clusters.forEach((cluster)=>{
+      let date = new Date(cluster.date)
+      
+      if(date.toISOString().split('T')[0] in statistics)
+       {
+          statistics[date.toISOString().split('T')[0]] += cluster.orders.length
+        cluster.orders.forEach((order)=>{
+          if(order.emergency_level==1) date.toISOString().split('T')[0] in high ? high[date.toISOString().split('T')[0]]=+1 : high[date.toISOString().split('T')[0]]=1;
+          else if (order.emergency_level==2)  date.toISOString().split('T')[0] in medium ? medium[date.toISOString().split('T')[0]]+=1 : medium[date.toISOString().split('T')[0]]=1;
+          else if(order.emergency_level==3)  date.toISOString().split('T')[0] in low ? low[date.toISOString().split('T')[0]]+=1 : low[date.toISOString().split('T')[0]]=1;
+        })
+      }
+      else
+     {
+        statistics[date.toISOString().split('T')[0]]= cluster.orders.length
+        cluster.orders.forEach((order)=>{
+          if(order.emergency_level==1) date.toISOString().split('T')[0] in high ? high[date.toISOString().split('T')[0]]+=1 : high[date.toISOString().split('T')[0]]=1;
+          else if (order.emergency_level==2)  date.toISOString().split('T')[0] in medium ? medium[date.toISOString().split('T')[0]]+=1 : medium[date.toISOString().split('T')[0]]=1;
+          else if(order.emergency_level==3)  date.toISOString().split('T')[0] in low ? low[date.toISOString().split('T')[0]]+=1 : low[date.toISOString().split('T')[0]]=1;
+        })
+      }
+    
+    })
+    console.log("total")
+    console.log(statistics)
+    console.log("high")
+    console.log(high)
+    console.log("medium")
+    console.log(medium)
+    console.log("low")
+    console.log(low)
+
+    return res.status(200).json({ total:statistics,high : high,medium : medium, low: low});
+  })
+  .catch((err)=>{
+    return res.status(400).json({ error: err});
+  });
+
+
+});
+
+
 module.exports = router;

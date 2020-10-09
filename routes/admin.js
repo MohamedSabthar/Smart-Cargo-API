@@ -290,7 +290,7 @@ router.post("/register-vehicle", async (req, res) => {
     .save()
     .then((result) => {
       return res.status(201).json({
-        message: "vechile registered successfully",
+        message: "vechile registered successfully",vehicle
       });
     })
     .catch((err) => {
