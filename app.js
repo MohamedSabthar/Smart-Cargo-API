@@ -37,7 +37,10 @@ app.use("/admin", adminRoute);
 const storekeeperRoute = require("./routes/storekeeper");
 app.use("/storekeeper", storekeeperRoute);
 
-const registrationMail = require("./email/registration-mail");
+const driverRoute = require("./routes/driver");
+app.use("/driver", driverRoute);
+
+// const registrationMail = require("./email/registration-mail");
 
 //root end-point
 // app.get("/", (req, res) => {
