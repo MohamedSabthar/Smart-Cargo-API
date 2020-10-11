@@ -115,9 +115,11 @@ router.post("/make-cluster", async (req, res) => {
 
   console.log(orders);
 
-  const depot = await depotModel.findOne();
+  const depot = await depotModel.findOne().select('-__v');
 
-  const enineParams = { vehicles, orders, depot };
+  console.log(depot);
+
+  const enineParams = { vehicles, orders, depot:depot.location };
 
   //calling spring boot routing engine to break the clusters
   const clusteredOrders = [];
