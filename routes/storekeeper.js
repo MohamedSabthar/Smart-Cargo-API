@@ -364,7 +364,7 @@ async function validateUserProfile(user, isUpdate = false, id = null) {
           first: Joi.string()
             .pattern(/^[A-Za-z]+$/)
             .required(),
-          middle: Joi.string().required(),
+          middle: Joi.string(),
           last: Joi.string().required(),
         },
         contact: {
