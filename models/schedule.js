@@ -13,7 +13,7 @@ const scheduleSchema = new mongoose.Schema({
   storekeeper: {type: mongoose.Schema.Types.ObjectId ,ref: 'users'},
   vehicle: { type: mongoose.Schema.Types.ObjectId ,ref: 'vehicles' },
   date: {type:Date},
-  status : {type:String,default:'pending'}
+  status : {type:String,default:'pending'} // this field is required for driver mobile application
 });
 
 module.exports = mongoose.model("schedules", scheduleSchema);
