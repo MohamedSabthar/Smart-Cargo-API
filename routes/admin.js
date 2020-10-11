@@ -220,8 +220,8 @@ async function validateStoreKeeper(user, isUpdate = false, id = null) {
 
   const validation = await query
     .exec()
-    .then((drivers) => {
-      if (drivers.length >= 1) {
+    .then((storekeepers) => {
+      if (storekeepers.length >= 1) {
         return { error: "Store-keeper is already registered", value: {} };
       }
 
@@ -343,7 +343,7 @@ router.post("/register-vehicle", async (req, res) => {
     .save()
     .then((result) => {
       return res.status(201).json({
-        message: "vechile registered successfully",
+        message: "vechile registered successfully",vehicle
       });
     })
     .catch((err) => {
