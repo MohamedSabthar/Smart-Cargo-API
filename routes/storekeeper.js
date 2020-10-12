@@ -23,6 +23,9 @@ router.get("/vehicles", (req, res) => {
   //retun list of vehicles
   vehicleModel
     .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
+    .populate({
+      path:"vehicle_type"
+    })
     .exec()
     .then((vehicles) => {
       return res.status(200).json({ vehicles: vehicles });

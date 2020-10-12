@@ -563,9 +563,9 @@ async function validateVehicle(vehicle, isUpdate = false, id = null) {
           .uppercase()
           .required(),
         on_repair: Joi.bool(),
-        fuel_economy: Joi.number().min(1).required(),
-        load: Joi.number().min(1).required(),
-        capacity: Joi.number().min(1).required(),
+        // fuel_economy: Joi.number().min(1).required(),
+        // load: Joi.number().min(1).required(),
+        // capacity: Joi.number().min(1).required(),
       });
 
       return schema.validate(vehicle, { abortEarly: false });
