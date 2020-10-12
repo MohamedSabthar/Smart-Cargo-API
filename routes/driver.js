@@ -2,6 +2,7 @@ const router = require("express").Router();
 const scheduleModel = require("../models/schedule");
 const userModel = require("../models/users");
 const orderModel = require("../models/orders");
+const vehicleModel = require("../models/vehicle");
 const driverMiddleware = require("../middleware/driver-middleware");
 const { required } = require("@hapi/joi");
 
@@ -24,7 +25,19 @@ router.get("/", (req, res) => {
     .populate({ path: "route" })
     .exec()
     .then((schedule) => {
-      return res.status(200).json({ schedule: schedule });
+      userModel
+      .findById(req.middleware._id)
+      .select("-password -reset_token -__v -allowed_vehicle")
+      .exec()
+      .then((driver) => {
+        console.log({ profile: driver , schedule: schedule });
+
+        return res.status(200).json({ profile: driver , schedule: schedule });
+      })
+      .catch((error) => {
+        return res.status(500).json({ error: error });
+      });
+      // return res.status(200).json({ schedule: schedule });
     })
     .catch((error) => {
       return res.status(500).json({ error: error });
@@ -75,6 +88,13 @@ router.put("/schedule/:id",  (req, res) => {
         .findByIdAndUpdate(
           cluster.driver,
           { $set: { user_is_available: true } },
+          { new: true },
+        )
+
+        const vehicle = await vehicleModel
+        .findByIdAndUpdate(
+          cluster.vehicle,
+          { $set: { is_available: true } },
           { new: true },
         )
         
