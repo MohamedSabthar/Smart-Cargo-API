@@ -147,7 +147,7 @@ router.post("/make-cluster", async (req, res) => {
         { $set: { status: "clustered" } }
       );
 
-      await orderModel.updateMany(
+      await vehicleModel.updateMany(
         { _id: { $in: clusterVehicles } },
         { $set: { is_available: false } }
       );
