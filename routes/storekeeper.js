@@ -23,6 +23,9 @@ router.get("/vehicles", (req, res) => {
   //retun list of vehicles
   vehicleModel
     .find({ $or: [{ deleted: { $exists: false } }, { deleted: false }] })
+    .populate({
+      path:"vehicle_type"
+    })
     .exec()
     .then((vehicles) => {
       return res.status(200).json({ vehicles: vehicles });
@@ -115,9 +118,11 @@ router.post("/make-cluster", async (req, res) => {
 
   console.log(orders);
 
-  const depot = await depotModel.findOne();
+  const depot = await depotModel.findOne().select('-__v');
 
-  const enineParams = { vehicles, orders, depot };
+  console.log(depot);
+
+  const enineParams = { vehicles, orders, depot:depot.location };
 
   //calling spring boot routing engine to break the clusters
   const clusteredOrders = [];
@@ -398,7 +403,7 @@ async function validateUserProfile(user, isUpdate = false, id = null) {
           first: Joi.string()
             .pattern(/^[A-Za-z]+$/)
             .required(),
-          middle: Joi.string().required(),
+          middle: Joi.string(),
           last: Joi.string().required(),
         },
         contact: {

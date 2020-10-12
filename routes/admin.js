@@ -269,7 +269,7 @@ router.post("/register-vehicle-type", async (req, res) => {
     .save()
     .then((result) => {
       return res.status(201).json({
-        message: "vehicle type registered successfully",
+        message: "vehicle type registered successfully",vehicleType
       });
     })
     .catch((err) => {
@@ -563,9 +563,9 @@ async function validateVehicle(vehicle, isUpdate = false, id = null) {
           .uppercase()
           .required(),
         on_repair: Joi.bool(),
-        fuel_economy: Joi.number().min(1).required(),
-        load: Joi.number().min(1).required(),
-        capacity: Joi.number().min(1).required(),
+        // fuel_economy: Joi.number().min(1).required(),
+        // load: Joi.number().min(1).required(),
+        // capacity: Joi.number().min(1).required(),
       });
 
       return schema.validate(vehicle, { abortEarly: false });
@@ -595,8 +595,10 @@ router.post("/register-depot", async (req, res) => {
   depot
     .save()
     .then((result) => {
+      console.log("result: ", result);
       return res.status(201).json({
         message: "depot registered successfully",
+        depotId: result._id
       });
     })
     .catch((err) => {
@@ -610,13 +612,16 @@ router.post("/register-depot", async (req, res) => {
 
 router.post("/update-depot/:depotId", async (req, res) => {
   const id = req.params.depotId;
-  const { error, value } = await validateDepot(req.body);
+  const { error, value } = await validateDepot(req.body, true, id);
+
+
 
   //checking for bad(400) request error
   if (error) return res.status(400).json({ error: error });
 
+  console.log('req.body: ', JSON.stringify(req.body, null, 2));
   depotModel
-    .findByIdAndUpdate({ _id: id }, { $set: req.body })
+    .findByIdAndUpdate({ _id: id }, { $set: value })
     .then((result) => {
       //checking if given id does not exist in the database
       if (!result) return res.status(400).json({ error: "Depot not found" });
@@ -639,6 +644,9 @@ router.get("/depot", (req, res) => {
 });
 //validate function for depot registration and update
 async function validateDepot(depot, isUpdate = false, id = null) {
+
+  console.log("Got the depot as : ", depot);
+
   let query = depotModel.find();
 
   //extend the query if the request is update
@@ -659,7 +667,7 @@ async function validateDepot(depot, isUpdate = false, id = null) {
         address: Joi.string().required(),
       });
 
-      return schema.validate(depot, { abortEarly: false });
+      return schema.validate(depot.depot, { abortEarly: false });
     })
     .catch((err) => {
       return { error: err, value: {} };
