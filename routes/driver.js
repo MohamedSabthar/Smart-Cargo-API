@@ -46,7 +46,11 @@ router.get("/profile", (req, res) => {
 
 router.put("/deliverd/:id", (req, res) => {
   orderModel
-    .findByIdAndUpdate(req.params.id, { $set: { status: "delivered" } },{ new: true },)
+    .findByIdAndUpdate(
+      req.params.id,
+      { $set: { status: "delivered" } },
+      { new: true },
+    )
     .exec()
     .then((order) => {
       return res.status(200).json({ order: order });
@@ -56,12 +60,25 @@ router.put("/deliverd/:id", (req, res) => {
     });
 });
 
-router.put("/schedule/:id", (req, res) => {
+router.put("/schedule/:id",  (req, res) => {
   scheduleModel
-    .findByIdAndUpdate(req.params.id, { $set: { status: "delivered" } },{ new: true },)
+    .findByIdAndUpdate(
+      req.params.id,
+      { $set: { status: "delivered" } },
+      { new: true },
+    )
     .exec()
-    .then((order) => {
-      return res.status(200).json({ order: order });
+    .then(async (cluster) => {
+
+      //update the driver availability to true
+      const driver = await userModel
+        .findByIdAndUpdate(
+          cluster.driver,
+          { $set: { user_is_available: true } },
+          { new: true },
+        )
+        
+      return res.status(200).json({ order: cluster });
     })
     .catch((error) => {
       return res.status(500).json({ error: error });
