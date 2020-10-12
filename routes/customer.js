@@ -45,6 +45,7 @@ function validateOrder(order, bulk = false) {
       lat: Joi.number().required(),
       lang: Joi.number().required(),
     },
+    emergency_level: Joi.required(),
     products: Joi.array().items({
       item: Joi.string().required(),
       quantity: Joi.number().integer().min(1).required(),
