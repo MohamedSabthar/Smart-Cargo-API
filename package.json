@@ -18,7 +18,7 @@
     "mongoose": "^5.9.14",
     "morgan": "^1.10.0",
     "node-cron": "^2.0.3",
-    "nodemailer": "^6.4.10",
+    "nodemailer": "^6.4.16",
     "nodemon": "^2.0.4",
     "socket.io": "^2.3.0"
   }
